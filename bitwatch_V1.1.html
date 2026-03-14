@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>比特观察 · 加密钱包</title>
+
+		<!-- PWA配置 -->
+		<link rel="manifest" href="manifest.json">
+		<meta name="theme-color" content="#f97316">
+
+		<!-- iOS特定配置 -->
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+		<meta name="apple-mobile-web-app-title" content="比特观察">
+		<link rel="apple-touch-icon" href="icon-192.png">
+		<!-- 使用南科大镜像资源 -->
+		<script src="https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/tailwindcss-browser/4.1.13/index.global.min.js"></script>
+		<link rel="stylesheet" href="https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+		<script src="https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/vue/3.5.22/vue.global.prod.min.js"></script>
+		<style>
+/* 细微的加载动画和卡片效果 */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+.address-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
+.skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
+@keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+/* 密码遮罩层 */
+.password-overlay { backdrop-filter: blur(8px); }
+/* 确保解锁后内容正常显示 */
+[v-cloak] { display: none; }
+		</style>
+	</head>
+	<body class="bg-gray-50 font-sans antialiased">
+
+		<div id="app" v-cloak>
+			<!-- 主内容区域 - 使用v-if控制显示 -->
+			<div v-if="isUnlocked" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+				<!-- 头部信息 -->
+				<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+					<div>
+						<h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
+							<i class="fa-brands fa-bitcoin text-orange-500"></i> 
+							比特观察 <span class="text-sm font-normal text-gray-400 bg-gray-100 px-3 py-1 rounded-full">加密只读</span>
+						</h1>
+						<p class="text-gray-500 mt-1 text-sm flex items-center gap-2">
+						<i class="fa-regular fa-eye"></i> 链上数据来自 mempool.space 
+						<span class="inline-block w-2 h-2 bg-green-400 rounded-full"></span>
+						</p>
+					</div>
+					<div class="flex gap-2 w-full md:w-auto">
+						<button @click="exportBackup" class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition flex items-center gap-2 shadow-sm">
+							<i class="fa-solid fa-download"></i> 导出列表
+						</button>
+						<label class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition flex items-center gap-2 shadow-sm cursor-pointer">
+							<i class="fa-solid fa-upload"></i> 导入
+							<input type="file" accept=".json,application/json" @change="importBackup" class="hidden">
+						</label>
+						<button @click="refreshAllAddresses" :disabled="isRefreshingAll" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+							<i class="fa-solid fa-rotate" :class="{'animate-spin': isRefreshingAll}"></i> 
+							{{ isRefreshingAll ? '刷新中' : '全部刷新' }}
+						</button>
+					</div>
+				</div>
+
+				<!-- 费率卡片 -->
+				<div v-if="fees" class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
+					<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+						<div class="text-xs text-gray-400 flex items-center gap-1"><i class="fa-regular fa-clock"></i> 最快</div>
+						<div class="text-xl font-bold text-gray-800">{{ fees.fastestFee }} <span class="text-sm font-normal text-gray-400">sat/vB</span></div>
+					</div>
+					<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+						<div class="text-xs text-gray-400">半小时</div>
+						<div class="text-xl font-bold text-gray-800">{{ fees.halfHourFee }} <span class="text-sm font-normal text-gray-400">sat/vB</span></div>
+					</div>
+					<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+						<div class="text-xs text-gray-400">一小时</div>
+						<div class="text-xl font-bold text-gray-800">{{ fees.hourFee }} <span class="text-sm font-normal text-gray-400">sat/vB</span></div>
+					</div>
+					<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+						<div class="text-xs text-gray-400">经济</div>
+						<div class="text-xl font-bold text-gray-800">{{ fees.economyFee }} <span class="text-sm font-normal text-gray-400">sat/vB</span></div>
+					</div>
+					<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+						<div class="text-xs text-gray-400">最低</div>
+						<div class="text-xl font-bold text-gray-800">{{ fees.minimumFee }} <span class="text-sm font-normal text-gray-400">sat/vB</span></div>
+					</div>
+				</div>
+				<div v-else class="h-16 mb-8 skeleton rounded-xl"></div>
+
+				<!-- 添加地址表单 -->
+				<div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
+					<h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2"><i class="fa-regular fa-plus"></i> 添加观察地址</h2>
+					<div class="flex flex-col sm:flex-row gap-3">
+						<input type="text" v-model="newAddressInput" placeholder="比特币地址 (以1、3或bc1开头)" 
+																	 class="flex-1 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-200 focus:border-orange-300 outline-none transition">
+						<input type="text" v-model="newLabelInput" placeholder="标签 (可选)" 
+																   class="sm:w-48 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-200 focus:border-orange-300 outline-none transition">
+						<button @click="addNewAddress" :disabled="!isAddressInputValid" 
+																   class="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-xl font-medium transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm">
+							<i class="fa-regular fa-bookmark"></i> 添加
+						</button>
+					</div>
+					<p v-if="addressError" class="text-red-500 text-sm mt-2"><i class="fa-solid fa-circle-exclamation"></i> {{ addressError }}</p>
+					<p v-if="!isAddressInputValid && newAddressInput.length > 0" class="text-amber-500 text-sm mt-2">地址格式建议: 1... / 3... / bc1... (长度26~62)</p>
+				</div>
+
+				<!-- 总资产卡片 -->
+				<div class="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 border border-orange-100 shadow-sm mb-8">
+					<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+						<div>
+							<span class="text-sm text-orange-600 font-medium">总余额 (仅已确认)</span>
+							<div class="text-4xl font-bold text-gray-800 mt-1">{{ totalBalance.toLocaleString() }} <span class="text-base font-normal text-gray-500">sats</span></div>
+							<div class="text-sm text-gray-500 mt-1"><i class="fa-regular fa-circle-dot"></i> ≈ {{ (totalBalance / 100000000).toFixed(8) }} BTC</div>
+						</div>
+						<div class="text-right text-sm text-gray-500">
+							<div><i class="fa-regular fa-clock"></i> 上次全量刷新: {{ lastRefreshTime || '尚未' }}</div>
+							<div class="mt-1"><span class="bg-white px-3 py-1 rounded-full text-xs">观察中 {{ addressList.length }} 个地址</span></div>
+						</div>
+					</div>
+				</div>
+
+				<!-- 地址列表网格 -->
+				<div v-if="addressList.length === 0" class="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-200">
+					<i class="fa-regular fa-face-frown text-5xl text-gray-300 mb-4"></i>
+					<p class="text-gray-400 text-lg">还没有添加观察地址</p>
+					<p class="text-gray-300 text-sm mt-2">在上方输入地址开始追踪</p>
+				</div>
+
+				<div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+					<div v-for="item in addressList" :key="item.address" class="address-card bg-white rounded-2xl p-5 border border-gray-100 shadow-sm transition-all duration-200 relative group">
+						<!-- 操作按钮 (hover显示) -->
+						<div class="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+							<button @click="refreshSingleAddress(item.address)" class="w-8 h-8 bg-white rounded-full border border-gray-200 text-gray-500 hover:text-orange-500 hover:border-orange-200 flex items-center justify-center" :title="'刷新' + (item.label || '地址')">
+								<i class="fa-solid fa-rotate text-sm" :class="{'animate-spin': refreshingSet.has(item.address)}"></i>
+							</button>
+							<button @click="showAddressDetail(item)" class="w-8 h-8 bg-white rounded-full border border-gray-200 text-gray-500 hover:text-blue-500 hover:border-blue-200 flex items-center justify-center" title="交易详情">
+								<i class="fa-regular fa-rectangle-list"></i>
+							</button>
+							<button @click="removeAddress(item.address)" class="w-8 h-8 bg-white rounded-full border border-gray-200 text-gray-500 hover:text-red-500 hover:border-red-200 flex items-center justify-center" title="移除">
+								<i class="fa-regular fa-trash-can"></i>
+							</button>
+						</div>
+
+						<div class="flex items-start gap-3 mb-3">
+							<div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-500 flex-shrink-0">
+								<i class="fa-brands fa-bitcoin text-xl"></i>
+							</div>
+							<div class="flex-1 min-w-0">
+								<h3 class="font-semibold text-gray-800 truncate">{{ item.label || item.address.slice(0,10)+'…'+item.address.slice(-6) }}</h3>
+								<p class="text-xs text-gray-400 font-mono truncate">{{ item.address }}</p>
+							</div>
+						</div>
+
+						<div class="flex justify-between items-end mt-2">
+							<div>
+								<p class="text-xs text-gray-400">已确认</p>
+								<p class="text-xl font-bold text-gray-800">{{ (item.balance ?? 0).toLocaleString() }} <span class="text-xs font-normal text-gray-400">sats</span></p>
+								<p v-if="item.unconfirmedBalance && item.unconfirmedBalance !== 0" class="text-xs text-amber-500">
+								<i class="fa-regular fa-clock"></i> 未确认: {{ item.unconfirmedBalance.toLocaleString() }} sats
+								</p>
+							</div>
+							<div class="text-right text-xs text-gray-400">
+								<div v-if="item.lastChecked" class="whitespace-nowrap">{{ new Date(item.lastChecked).toLocaleTimeString() }}</div>
+								<div v-else>-</div>
+							</div>
+						</div>
+
+						<!-- 加载骨架 -->
+						<div v-if="item.balance === undefined && refreshingSet.has(item.address)" class="mt-2 h-4 skeleton rounded"></div>
+					</div>
+				</div>
+
+				<!-- 交易详情抽屉 -->
+				<div v-if="detailAddress" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4" @click.self="closeDetail">
+					<div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl max-h-[80vh] overflow-hidden">
+						<div class="p-6 border-b border-gray-100 flex justify-between items-center">
+							<div>
+								<h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i class="fa-regular fa-clock"></i> 交易历史</h2>
+								<p class="text-sm text-gray-400 break-all">{{ detailAddress.address }}</p>
+							</div>
+							<button @click="closeDetail" class="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+						</div>
+						<div class="p-4 overflow-y-auto" style="max-height: 60vh;">
+							<div v-if="loadingTx" class="flex justify-center py-8"><i class="fa-solid fa-spinner fa-spin text-3xl text-orange-300"></i></div>
+							<div v-else-if="transactions.length === 0" class="text-center py-12 text-gray-400"><i class="fa-regular fa-folder-open text-4xl mb-3"></i><p>暂无交易记录</p></div>
+							<div v-else class="space-y-3">
+								<div v-for="tx in transactions" :key="tx.txid" class="border border-gray-100 rounded-xl p-4 hover:bg-gray-50">
+									<div class="flex justify-between items-start gap-2">
+										<a :href="'https://mempool.space/tx/'+tx.txid" target="_blank" class="text-sm font-mono text-orange-600 truncate hover:underline">{{ tx.txid.slice(0,16) }}…{{ tx.txid.slice(-8) }}</a>
+										<span :class="tx.type === '接收' ? 'text-green-600' : 'text-red-600'" class="text-sm font-medium px-2 py-0.5 bg-gray-100 rounded-full">{{ tx.type }}</span>
+									</div>
+									<div class="flex justify-between items-center mt-2 text-sm">
+										<span class="text-gray-500"><i class="fa-regular fa-calendar mr-1"></i>{{ new Date(tx.time * 1000).toLocaleString() }}</span>
+										<span class="font-mono font-bold">{{ (tx.value / 1e8).toFixed(8) }} BTC</span>
+									</div>
+									<div class="text-xs text-gray-400 mt-1">确认数: {{ tx.confirmations }}</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- 密码锁遮罩层 - 当未解锁时显示 -->
+			<div v-if="!isUnlocked" class="fixed inset-0 bg-white/90 password-overlay z-[100] flex items-center justify-center p-4">
+				<div class="bg-white rounded-3xl shadow-2xl max-w-md w-full border border-gray-200 p-8">
+					<div class="text-center mb-6">
+						<i class="fa-brands fa-bitcoin text-5xl text-orange-400 mb-3"></i>
+						<h2 class="text-2xl font-bold text-gray-800">输入密码解锁</h2>
+						<p class="text-gray-400 text-sm mt-1">本地加密 · 密码仅用于此浏览器</p>
+					</div>
+					<div class="space-y-4">
+						<input type="password" v-model="passwordInput" @keyup.enter="unlockApp" placeholder="请输入本地密码" 
+																								class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-200 focus:border-orange-300 outline-none transition">
+						<button @click="unlockApp" :disabled="!passwordInput || isUnlocking" 
+																								class="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 rounded-xl font-medium transition disabled:opacity-40 shadow-sm flex items-center justify-center gap-2">
+							<i class="fa-solid" :class="isUnlocking ? 'fa-spinner fa-spin' : 'fa-lock-open'"></i> 
+							{{ isUnlocking ? '解锁中...' : '解锁' }}
+						</button>
+						<p v-if="passwordError" class="text-red-500 text-sm text-center"><i class="fa-solid fa-circle-exclamation"></i> {{ passwordError }}</p>
+						<p class="text-xs text-gray-300 text-center mt-6">首次使用：输入任意密码创建加密存储<br>请记住密码，数据将用AES-GCM加密保存在本地</p>
+						<p class="text-xs text-gray-600 text-center mt-6">打赏支持<i class="fa-solid fa-heart text-red-300"></i>：bc1qc4mu8c2y6xwhc8h65hj0phncc9kzsr7s6cjxk8</p>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			// 注册Service Worker
+			if ('serviceWorker' in navigator) {
+				window.addEventListener('load', () => {
+					navigator.serviceWorker.register('./sw.js')
+						.then(reg => console.log('Service Worker已注册'))
+						.catch(err => console.log('Service Worker注册失败:', err));
+				});
+			}
+
+			const { createApp, ref, computed, onMounted } = Vue;
+
+			// 简单的加密工具 - 使用更通用的 AES-GCM 模式
+			// 修改 getKey 函数，接收 salt 参数
+			async function getKey(password, salt) {
+				const enc = new TextEncoder();
+				const keyMaterial = await crypto.subtle.importKey(
+					'raw',
+					enc.encode(password),
+					{ name: 'PBKDF2' },
+					false,
+					['deriveKey']
+				);
+
+				// 使用传入的salt
+				return crypto.subtle.deriveKey(
+					{
+						name: 'PBKDF2',
+						salt: salt,
+						iterations: 100000,
+						hash: 'SHA-256'
+					},
+					keyMaterial,
+					{ name: 'AES-GCM', length: 256 },
+					false,
+					['encrypt', 'decrypt']
+				);
+			}
+
+			// 修改 encryptData，生成随机salt并存储
+			async function encryptData(password, plaintext) {
+				try {
+					// 生成随机salt
+					const salt = crypto.getRandomValues(new Uint8Array(16));
+					const key = await getKey(password, salt);
+
+					// 生成随机IV
+					const iv = crypto.getRandomValues(new Uint8Array(12));
+					const enc = new TextEncoder();
+					const data = enc.encode(plaintext);
+
+					// 加密
+					const ciphertext = await crypto.subtle.encrypt(
+						{ name: 'AES-GCM', iv: iv },
+						key,
+						data
+					);
+
+					// 组合 salt + iv + 密文
+					const combined = new Uint8Array(salt.length + iv.length + new Uint8Array(ciphertext).length);
+					combined.set(salt, 0);
+					combined.set(iv, salt.length);
+					combined.set(new Uint8Array(ciphertext), salt.length + iv.length);
+
+					// 转换为Base64
+					return btoa(String.fromCharCode(...combined));
+				} catch (e) {
+					console.error('加密失败', e);
+					throw e;
+				}
+			}
+
+			// 修改 decryptData，从密文中提取salt
+			async function decryptData(password, encryptedBase64) {
+				try {
+					// 解码Base64
+					const combined = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
+
+					// 提取salt (16字节)、IV (12字节) 和密文
+					const salt = combined.slice(0, 16);
+					const iv = combined.slice(16, 28);
+					const ciphertext = combined.slice(28);
+
+					const key = await getKey(password, salt);
+
+					// 解密
+					const decrypted = await crypto.subtle.decrypt(
+						{ name: 'AES-GCM', iv: iv },
+						key,
+						ciphertext
+					);
+
+					return new TextDecoder().decode(decrypted);
+				} catch (e) {
+					console.warn('解密失败', e);
+					throw new Error('密码错误或数据损坏');
+				}
+			}
+
+			const STORAGE_KEY = 'btc_observe_watchlist_encrypted';
+
+			const app = createApp({
+				setup() {
+					// 状态
+					const isUnlocked = ref(false);
+					const isUnlocking = ref(false);
+					const passwordInput = ref('');
+					const passwordError = ref('');
+					const currentPassword = ref('');
+
+					const addressList = ref([]);
+					const newAddressInput = ref('');
+					const newLabelInput = ref('');
+					const addressError = ref('');
+					const fees = ref(null);
+					const isRefreshingAll = ref(false);
+					const refreshingSet = ref(new Set());
+					const lastRefreshTime = ref('');
+					const detailAddress = ref(null);
+					const transactions = ref([]);
+					const loadingTx = ref(false);
+
+					// 计算属性
+					const isAddressInputValid = computed(() => {
+						const addr = newAddressInput.value.trim();
+						if (!addr) return false;
+						return /^(1|3|bc1)[a-zA-Z0-9]{25,62}$/.test(addr);
+					});
+
+					const totalBalance = computed(() => {
+						return addressList.value.reduce((acc, cur) => acc + (cur.balance || 0), 0);
+					});
+
+					// API 调用
+					const MEMPOOL_BASE = 'https://mempool.space/api';
+
+					async function fetchAddressBalance(address) {
+						const url = `${MEMPOOL_BASE}/address/${address}`;
+						const res = await fetch(url);
+						if (!res.ok) throw new Error(`HTTP ${res.status}`);
+						const data = await res.json();
+						const chain = data.chain_stats || {};
+						const mempool = data.mempool_stats || {};
+						const balance = (chain.funded_txo_sum || 0) - (chain.spent_txo_sum || 0);
+						const unconfirmedBalance = (mempool.funded_txo_sum || 0) - (mempool.spent_txo_sum || 0);
+						return { balance, unconfirmedBalance };
+					}
+
+					async function fetchAddressTransactions(address) {
+						const url = `${MEMPOOL_BASE}/address/${address}/txs`;
+						const res = await fetch(url);
+						if (!res.ok) throw new Error(`HTTP ${res.status}`);
+						const txs = await res.json();
+						return txs.map(tx => {
+							let value = 0;
+							let type = '发送';
+							const outputSum = tx.vout.filter(v => v.scriptpubkey_address === address).reduce((s, v) => s + v.value, 0);
+							const inputSum = tx.vin.filter(v => v.prevout && v.prevout.scriptpubkey_address === address).reduce((s, v) => s + (v.prevout.value || 0), 0);
+							value = outputSum - inputSum;
+							if (value > 0) type = '接收';
+							else if (value === 0) type = '自我';
+							return {
+								txid: tx.txid,
+								time: tx.status.block_time,
+								confirmations: tx.status.confirmations || 0,
+								value: value,
+								type: type
+							};
+						});
+					}
+
+					async function fetchFeeEstimates() {
+						const url = `${MEMPOOL_BASE}/v1/fees/recommended`;
+						const res = await fetch(url);
+						if (!res.ok) return null;
+						return await res.json();
+					}
+
+					// 保存加密数据 - 修改为直接接收密码参数
+					async function saveEncryptedAddressesWithPassword(password, list) {
+						if (!password) return;
+						try {
+							const plain = JSON.stringify(list);
+							const encrypted = await encryptData(password, plain);
+							if (encrypted) {
+								localStorage.setItem(STORAGE_KEY, encrypted);
+								console.log('数据已加密保存，长度:', encrypted.length); // 调试用
+							}
+						} catch (e) {
+							console.error('保存加密数据失败', e);
+						}
+					}
+
+					// 保存加密数据（使用当前密码）
+					async function saveEncryptedAddresses() {
+						if (!currentPassword.value) return;
+						await saveEncryptedAddressesWithPassword(currentPassword.value, addressList.value);
+					}
+
+					// 核心操作
+					async function addNewAddress() {
+						addressError.value = '';
+						const addr = newAddressInput.value.trim();
+						if (!isAddressInputValid.value) {
+							addressError.value = '地址格式不正确';
+							return;
+						}
+						if (addressList.value.some(a => a.address === addr)) {
+							addressError.value = '地址已存在';
+							return;
+						}
+
+						const newItem = {
+							address: addr,
+							label: newLabelInput.value.trim() || addr.slice(0, 6) + '…' + addr.slice(-4),
+							addedAt: Date.now(),
+							lastChecked: null,
+							balance: 0,
+							unconfirmedBalance: 0
+						};
+						addressList.value = [newItem, ...addressList.value];
+						await saveEncryptedAddresses();
+						newAddressInput.value = '';
+						newLabelInput.value = '';
+						await refreshSingleAddress(addr);
+					}
+
+					async function refreshSingleAddress(address) {
+						if (refreshingSet.value.has(address)) return;
+						refreshingSet.value.add(address);
+						try {
+							const data = await fetchAddressBalance(address);
+							const index = addressList.value.findIndex(a => a.address === address);
+							if (index !== -1) {
+								addressList.value[index] = {
+									...addressList.value[index],
+									balance: data.balance,
+									unconfirmedBalance: data.unconfirmedBalance,
+									lastChecked: Date.now()
+								};
+								addressList.value = [...addressList.value];
+								await saveEncryptedAddresses();
+							}
+						} catch (e) {
+							console.error('刷新失败', address, e);
+						} finally {
+							refreshingSet.value.delete(address);
+						}
+					}
+
+					async function refreshAllAddresses() {
+						if (isRefreshingAll.value) return;
+						isRefreshingAll.value = true;
+						try {
+							for (const item of addressList.value) {
+								await refreshSingleAddress(item.address);
+								await new Promise(r => setTimeout(r, 300));
+							}
+							lastRefreshTime.value = new Date().toLocaleString();
+						} catch (e) {
+							console.error('全量刷新出错', e);
+						} finally {
+							isRefreshingAll.value = false;
+						}
+					}
+
+					async function removeAddress(address) {
+						if (confirm('确定移除该地址？')) {
+							addressList.value = addressList.value.filter(a => a.address !== address);
+							await saveEncryptedAddresses();
+							if (detailAddress.value?.address === address) closeDetail();
+						}
+					}
+
+					function exportBackup() {
+						const data = addressList.value.map(({ address, label, addedAt }) => ({ address, label, addedAt }));
+						const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+						const url = URL.createObjectURL(blob);
+						const a = document.createElement('a');
+						a.href = url;
+						a.download = `btc-watchlist-${new Date().toISOString().slice(0,10)}.json`;
+						a.click();
+						URL.revokeObjectURL(url);
+					}
+
+					async function importBackup(e) {
+						const file = e.target.files[0];
+						if (!file) return;
+						try {
+							const text = await file.text();
+							const imported = JSON.parse(text);
+							if (!Array.isArray(imported)) throw new Error('格式错误');
+							const existingMap = new Map(addressList.value.map(a => [a.address, a]));
+							imported.forEach(item => {
+								if (item.address && !existingMap.has(item.address)) {
+									existingMap.set(item.address, {
+										address: item.address,
+										label: item.label || item.address.slice(0,8),
+										addedAt: item.addedAt || Date.now(),
+										lastChecked: null,
+										balance: 0,
+										unconfirmedBalance: 0
+									});
+								}
+							});
+							addressList.value = Array.from(existingMap.values());
+							await saveEncryptedAddresses();
+						} catch (err) {
+							alert('导入失败：' + err.message);
+						} finally {
+							e.target.value = '';
+						}
+					}
+
+					async function showAddressDetail(item) {
+						detailAddress.value = item;
+						loadingTx.value = true;
+						transactions.value = [];
+						try {
+							const txs = await fetchAddressTransactions(item.address);
+							transactions.value = txs;
+						} catch (error) {
+							console.error('获取交易历史失败', error);
+						} finally {
+							loadingTx.value = false;
+						}
+					}
+
+					function closeDetail() {
+						detailAddress.value = null;
+						transactions.value = [];
+					}
+
+					// 解锁应用
+					async function unlockApp() {
+						if (!passwordInput.value || isUnlocking.value) return;
+
+						isUnlocking.value = true;
+						passwordError.value = '';
+
+						try {
+							const stored = localStorage.getItem(STORAGE_KEY);
+
+							if (!stored) {
+								// 首次使用：创建空数据并立即加密保存
+								console.log('首次使用，创建加密存储');
+								const emptyList = [];
+								// 先设置当前密码
+								currentPassword.value = passwordInput.value;
+								// 保存空数组（加密）
+								await saveEncryptedAddressesWithPassword(currentPassword.value, emptyList);
+								addressList.value = emptyList;
+								isUnlocked.value = true;
+								passwordInput.value = '';
+
+								// 验证一下是否真的加密了
+								const saved = localStorage.getItem(STORAGE_KEY);
+								console.log('首次保存的数据(应是密文):', saved ? saved.substring(0, 50) + '...' : '无');
+							} else {
+								// 尝试解密
+								console.log('尝试解密已有数据');
+								const decrypted = await decryptData(passwordInput.value, stored);
+								addressList.value = JSON.parse(decrypted);
+								currentPassword.value = passwordInput.value;
+								isUnlocked.value = true;
+								passwordInput.value = '';
+							}
+
+							// 加载费率
+							try {
+								fees.value = await fetchFeeEstimates();
+							} catch (e) {
+								console.warn('费率获取失败', e);
+							}
+
+							// 自动刷新
+							if (addressList.value.length > 0) {
+								setTimeout(() => {
+									refreshAllAddresses().catch(console.error);
+								}, 500);
+							}
+						} catch (e) {
+							passwordError.value = '密码错误，请重试';
+							console.error('解锁失败', e);
+						} finally {
+							isUnlocking.value = false;
+						}
+					}
+
+					// 初始化加载费率
+					onMounted(async () => {
+						try {
+							fees.value = await fetchFeeEstimates();
+						} catch (e) {
+							console.warn('费率获取失败', e);
+						}
+
+						// 调试：检查当前存储的数据
+						const stored = localStorage.getItem(STORAGE_KEY);
+						if (stored) {
+							console.log('检测到已存储的数据(密文长度):', stored.length);
+						} else {
+							console.log('未检测到存储数据');
+						}
+					});
+
+					return {
+						isUnlocked,
+						isUnlocking,
+						passwordInput,
+						passwordError,
+						addressList,
+						newAddressInput,
+						newLabelInput,
+						addressError,
+						isAddressInputValid,
+						fees,
+						isRefreshingAll,
+						refreshingSet,
+						lastRefreshTime,
+						totalBalance,
+						detailAddress,
+						transactions,
+						loadingTx,
+						addNewAddress,
+						refreshSingleAddress,
+						refreshAllAddresses,
+						removeAddress,
+						exportBackup,
+						importBackup,
+						showAddressDetail,
+						closeDetail,
+						unlockApp,
+					};
+				}
+			});
+
+			app.mount('#app');
+		</script>
+	</body>
+</html>
