@@ -68,7 +68,10 @@
 						<div>
 							<span class="text-sm text-orange-600 font-medium">总余额 (仅已确认)</span>
 							<div class="text-4xl font-bold text-gray-800 mt-1">{{ totalBalance.toLocaleString() }} <span class="text-base font-normal text-gray-500">sats</span></div>
-							<div class="text-sm text-gray-500 mt-1"><i class="fa-regular fa-circle-dot"></i> ≈ {{ (totalBalance / 100000000).toFixed(8) }} BTC</div>
+							<div class="text-sm text-gray-500 mt-1">
+								<i class="fa-regular fa-circle-dot"></i> ≈ {{ (totalBalance / 100000000).toFixed(8) }} BTC
+								<span v-if="btcToCnyRate"> ≈ ¥{{ ((totalBalance / 100000000) * btcToCnyRate).toLocaleString('zh-CN', {maximumFractionDigits: 2}) }}</span>
+							</div>
 						</div>
 						<div class="text-right text-sm text-gray-500">
 							<div><i class="fa-regular fa-clock"></i> 上次全量刷新: {{ lastRefreshTime || '尚未' }}</div>
@@ -124,9 +127,9 @@
 				</div>
 
 				<div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-					<div v-for="item in addressList" :key="item.address" class="address-card bg-white rounded-2xl p-5 border border-gray-100 shadow-sm transition-all duration-200 relative group">
-						<!-- 操作按钮 (hover显示) -->
-						<div class="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+					<div v-for="item in sortedAddressList" :key="item.address" class="address-card bg-white rounded-2xl p-5 border border-gray-100 shadow-sm transition-all duration-200 relative group">
+						<!-- 操作按钮 -->
+						<div class="absolute top-3 right-3 flex gap-1">
 							<button @click="refreshSingleAddress(item.address)" class="w-8 h-8 bg-white rounded-full border border-gray-200 text-gray-500 hover:text-orange-500 hover:border-orange-200 flex items-center justify-center" :title="'刷新' + (item.label || '地址')">
 								<i class="fa-solid fa-rotate text-sm" :class="{'animate-spin': refreshingSet.has(item.address)}"></i>
 							</button>
@@ -343,6 +346,7 @@
 					const detailAddress = ref(null);
 					const transactions = ref([]);
 					const loadingTx = ref(false);
+					const btcToCnyRate = ref(null);
 
 					// 计算属性
 					const isAddressInputValid = computed(() => {
@@ -353,6 +357,11 @@
 
 					const totalBalance = computed(() => {
 						return addressList.value.reduce((acc, cur) => acc + (cur.balance || 0), 0);
+					});
+
+					// 按余额排序的地址列表
+					const sortedAddressList = computed(() => {
+						return [...addressList.value].sort((a, b) => (b.balance || 0) - (a.balance || 0));
 					});
 
 					// API 调用
@@ -398,6 +407,20 @@
 						const res = await fetch(url);
 						if (!res.ok) return null;
 						return await res.json();
+					}
+
+					async function fetchBtcToCnyRate() {
+						try {
+							// 使用CoinGecko API获取BTC到CNY汇率
+							const url = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=cny';
+							const res = await fetch(url);
+							if (!res.ok) return null;
+							const data = await res.json();
+							return data.bitcoin?.cny || null;
+						} catch (e) {
+							console.warn('获取汇率失败', e);
+							return null;
+						}
 					}
 
 					// 保存加密数据 - 修改为直接接收密码参数
@@ -590,9 +613,10 @@
 								passwordInput.value = '';
 							}
 
-							// 加载费率
+							// 加载费率和汇率
 							try {
 								fees.value = await fetchFeeEstimates();
+								btcToCnyRate.value = await fetchBtcToCnyRate();
 							} catch (e) {
 								console.warn('费率获取失败', e);
 							}
@@ -634,11 +658,13 @@
 						passwordInput,
 						passwordError,
 						addressList,
+						sortedAddressList,
 						newAddressInput,
 						newLabelInput,
 						addressError,
 						isAddressInputValid,
 						fees,
+						btcToCnyRate,
 						isRefreshingAll,
 						refreshingSet,
 						lastRefreshTime,
