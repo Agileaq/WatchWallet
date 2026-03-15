@@ -1,6 +1,6 @@
-const CACHE_NAME = 'bitwatch-v3.4';
+const CACHE_NAME = 'bitwatch-v4.0';
 const urlsToCache = [
-  './bitwatch_V3.4.html',
+  './bitwatch_V4.0.html',
   'https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/tailwindcss-browser/4.1.13/index.global.min.js',
   'https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/font-awesome/6.4.0/css/all.min.css',
   'https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/vue/3.5.22/vue.global.prod.min.js'
