@@ -44,7 +44,7 @@
 							比特观察 <span class="text-sm font-normal text-gray-400 bg-gray-100 px-3 py-1 rounded-full">加密只读</span>
 						</h1>
 						<p class="text-gray-500 mt-1 text-sm flex items-center gap-2">
-						<i class="fa-regular fa-eye"></i> 链上数据来自 mempool.space 
+						<i class="fa-regular fa-eye"></i> 数据自多数源: mempool, blockchain etc
 						<span class="inline-block w-2 h-2 bg-green-400 rounded-full"></span>
 						</p>
 					</div>
@@ -155,7 +155,8 @@
 							<div>
 								<p class="text-xs text-gray-400">已确认</p>
 								<p class="text-xl font-bold text-gray-800">{{ (item.balance ?? 0).toLocaleString() }} <span class="text-xs font-normal text-gray-400">sats</span></p>
-								<p v-if="item.unconfirmedBalance && item.unconfirmedBalance !== 0" class="text-xs text-amber-500">
+								<p class="text-xs text-gray-500">≈ {{ ((item.balance ?? 0) / 100000000).toFixed(8) }} BTC</p>
+								<p v-if="item.unconfirmedBalance && item.unconfirmedBalance !== 0" class="text-xs text-amber-500 mt-1">
 								<i class="fa-regular fa-clock"></i> 未确认: {{ item.unconfirmedBalance.toLocaleString() }} sats
 								</p>
 							</div>
