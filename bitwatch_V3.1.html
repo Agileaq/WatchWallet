@@ -1097,6 +1097,8 @@
 
 					// 使用生物识别解锁
 					async function unlockWithBiometric() {
+						console.log('unlockWithBiometric 被调用了！');
+						alert('函数被调用了！即将开始验证...');
 						isUnlocking.value = true;
 						passwordError.value = '';
 
