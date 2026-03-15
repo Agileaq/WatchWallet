@@ -1,6 +1,6 @@
-const CACHE_NAME = 'bitwatch-v1.1';
+const CACHE_NAME = 'bitwatch-v2.0';
 const urlsToCache = [
-  './bitwatch_V1.1.html',
+  './bitwatch_V2.0.html',
   'https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/tailwindcss-browser/4.1.13/index.global.min.js',
   'https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/font-awesome/6.4.0/css/all.min.css',
   'https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/vue/3.5.22/vue.global.prod.min.js'
@@ -19,6 +19,11 @@ self.addEventListener('install', event => {
 
 // 拦截请求，优先使用缓存
 self.addEventListener('fetch', event => {
+  // 只处理http/https协议的请求，忽略chrome-extension等协议
+  if (!event.request.url.startsWith('http')) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then(response => {
@@ -33,15 +38,20 @@ self.addEventListener('fetch', event => {
             if (!response || response.status !== 200 || response.type !== 'basic') {
               return response;
             }
-            // 克隆响应并缓存
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME)
-              .then(cache => {
-                cache.put(event.request, responseToCache);
-              });
+            // 只缓存http/https的GET请求
+            if (event.request.method === 'GET' && event.request.url.startsWith('http')) {
+              const responseToCache = response.clone();
+              caches.open(CACHE_NAME)
+                .then(cache => {
+                  cache.put(event.request, responseToCache);
+                });
+            }
             return response;
           }
-        );
+        ).catch(() => {
+          // 网络请求失败，返回离线页面或默认响应
+          return new Response('网络连接失败', { status: 503 });
+        });
       })
   );
 });

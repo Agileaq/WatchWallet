@@ -368,15 +368,25 @@
 					const MEMPOOL_BASE = 'https://mempool.space/api';
 
 					async function fetchAddressBalance(address) {
-						const url = `${MEMPOOL_BASE}/address/${address}`;
-						const res = await fetch(url);
-						if (!res.ok) throw new Error(`HTTP ${res.status}`);
-						const data = await res.json();
-						const chain = data.chain_stats || {};
-						const mempool = data.mempool_stats || {};
-						const balance = (chain.funded_txo_sum || 0) - (chain.spent_txo_sum || 0);
-						const unconfirmedBalance = (mempool.funded_txo_sum || 0) - (mempool.spent_txo_sum || 0);
-						return { balance, unconfirmedBalance };
+						try {
+							const url = `${MEMPOOL_BASE}/address/${address}`;
+							const controller = new AbortController();
+							const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+
+							const res = await fetch(url, { signal: controller.signal });
+							clearTimeout(timeoutId);
+
+							if (!res.ok) throw new Error(`HTTP ${res.status}`);
+							const data = await res.json();
+							const chain = data.chain_stats || {};
+							const mempool = data.mempool_stats || {};
+							const balance = (chain.funded_txo_sum || 0) - (chain.spent_txo_sum || 0);
+							const unconfirmedBalance = (mempool.funded_txo_sum || 0) - (mempool.spent_txo_sum || 0);
+							return { balance, unconfirmedBalance };
+						} catch (e) {
+							console.warn(`地址余额获取失败 (${address.slice(0,8)}...):`, e.message);
+							throw e; // 重新抛出，让上层处理
+						}
 					}
 
 					async function fetchAddressTransactions(address) {
@@ -403,10 +413,63 @@
 					}
 
 					async function fetchFeeEstimates() {
-						const url = `${MEMPOOL_BASE}/v1/fees/recommended`;
-						const res = await fetch(url);
-						if (!res.ok) return null;
-						return await res.json();
+						const sources = [
+							{
+								name: 'Mempool.space',
+								url: `${MEMPOOL_BASE}/v1/fees/recommended`,
+								parse: (data) => ({
+									fastestFee: data.fastestFee,
+									halfHourFee: data.halfHourFee,
+									hourFee: data.hourFee,
+									economyFee: data.economyFee,
+									minimumFee: data.minimumFee
+								})
+							},
+							{
+								name: 'Blockstream.info',
+								url: 'https://blockstream.info/api/fee-estimates',
+								parse: (data) => ({
+									fastestFee: Math.ceil(data['2'] || data['3'] || 50),
+									halfHourFee: Math.ceil(data['6'] || 30),
+									hourFee: Math.ceil(data['12'] || 20),
+									economyFee: Math.ceil(data['144'] || 10),
+									minimumFee: Math.ceil(data['504'] || 5)
+								})
+							},
+							{
+								name: 'Blockchain.com',
+								url: 'https://api.blockchain.com/mempool/fees',
+								parse: (data) => ({
+									fastestFee: data.priority || 50,
+									halfHourFee: Math.ceil((data.priority + data.regular) / 2) || 30,
+									hourFee: data.regular || 20,
+									economyFee: Math.ceil(data.regular * 0.5) || 10,
+									minimumFee: data.limits?.min || 5
+								})
+							}
+						];
+
+						for (const source of sources) {
+							try {
+								console.log(`尝试获取费率: ${source.name}`);
+								const controller = new AbortController();
+								const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+								const res = await fetch(source.url, { signal: controller.signal });
+								clearTimeout(timeoutId);
+
+								if (!res.ok) continue;
+								const data = await res.json();
+								const fees = source.parse(data);
+								console.log(`费率获取成功 (${source.name}):`, fees);
+								return fees;
+							} catch (e) {
+								console.warn(`${source.name} 费率获取失败:`, e.message);
+							}
+						}
+
+						console.error('所有费率API均失败');
+						return null;
 					}
 
 					async function fetchBtcToCnyRate() {
@@ -426,13 +489,23 @@
 								name: 'CoinGecko',
 								url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=cny',
 								parse: (data) => data.bitcoin?.cny
+							},
+							{
+								name: 'CryptoCompare',
+								url: 'https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=CNY',
+								parse: (data) => data.CNY
 							}
 						];
 
 						for (const source of sources) {
 							try {
 								console.log(`尝试获取汇率: ${source.name}`);
-								const res = await fetch(source.url);
+								const controller = new AbortController();
+								const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
+
+								const res = await fetch(source.url, { signal: controller.signal });
+								clearTimeout(timeoutId);
+
 								if (!res.ok) continue;
 								const data = await res.json();
 								const rate = source.parse(data);
@@ -445,6 +518,7 @@
 							}
 						}
 
+						// 所有API均失败
 						console.error('所有汇率API均失败');
 						return null;
 					}
@@ -525,11 +599,14 @@
 						if (isRefreshingAll.value) return;
 						isRefreshingAll.value = true;
 						try {
+							console.log(`开始刷新 ${addressList.value.length} 个地址...`);
 							for (const item of addressList.value) {
 								await refreshSingleAddress(item.address);
-								await new Promise(r => setTimeout(r, 300));
+								// 增加延迟到1秒，避免触发mempool.space的速率限制
+								await new Promise(r => setTimeout(r, 1000));
 							}
 							lastRefreshTime.value = new Date().toLocaleString();
+							console.log('全部地址刷新完成');
 						} catch (e) {
 							console.error('全量刷新出错', e);
 						} finally {
