@@ -443,12 +443,12 @@
 					const challenge = generateChallenge();
 					const userIdBytes = new TextEncoder().encode(userId);
 
+					// 不设置 rp.id，让浏览器自动使用当前域名
 					const credential = await navigator.credentials.create({
 						publicKey: {
 							challenge: challenge,
 							rp: {
-								name: "比特观察",
-								id: window.location.hostname
+								name: "比特观察"
 							},
 							user: {
 								id: userIdBytes,
@@ -1078,7 +1078,13 @@
 							alert('✅ Face ID / Touch ID 已启用！\n下次打开应用时，您可以使用生物识别快速解锁。');
 						} catch (e) {
 							console.error('启用生物识别失败:', e);
-							passwordError.value = e.message || '启用生物识别失败，请稍后重试';
+							const errorMsg = e.name === 'NotAllowedError'
+								? '用户取消了生物识别验证'
+								: e.name === 'NotSupportedError'
+								? '此设备不支持生物识别'
+								: (e.message || '启用生物识别失败，请稍后重试');
+							alert('❌ 启用失败\n\n' + errorMsg + '\n\n详细错误: ' + e.name);
+							passwordError.value = errorMsg;
 						} finally {
 							isUnlocking.value = false;
 						}
@@ -1110,7 +1116,11 @@
 							console.log('生物识别解锁成功');
 						} catch (e) {
 							console.error('生物识别解锁失败:', e);
-							passwordError.value = e.message || '生物识别验证失败';
+							const errorMsg = e.name === 'NotAllowedError'
+								? '用户取消了验证'
+								: (e.message || '生物识别验证失败');
+							alert('❌ 验证失败\n\n' + errorMsg + '\n\n请使用密码解锁。\n详细错误: ' + e.name);
+							passwordError.value = errorMsg;
 							// 失败后允许用户输入密码
 						} finally {
 							isUnlocking.value = false;
