@@ -44,5 +44,5 @@
 ---
 
 Made with ❤️ (感恩刘教链的第一个版本的inspiration )  
-保留README里教链的打赏支持地址: bc1qc4mu8c2y6xwhc8h65hj0phncc9kzsr7s6cjxk8
-Agileaq的打赏支持地址: 128ikttXEBd5ggeFecv5844yJ6tfKSQeTr
+- 保留README里教链的打赏支持地址: bc1qc4mu8c2y6xwhc8h65hj0phncc9kzsr7s6cjxk8
+- Agileaq的打赏支持地址: 128ikttXEBd5ggeFecv5844yJ6tfKSQeTr
