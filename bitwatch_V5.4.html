@@ -47,7 +47,7 @@
 					<div>
 						<h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
 							<i class="fa-brands fa-bitcoin text-orange-500"></i>
-							比特观察 <span class="text-lg font-normal text-orange-500">V5.1</span>
+							比特观察 <span class="text-lg font-normal text-orange-500">V5.4</span>
 							<span class="text-sm font-normal text-gray-400 bg-gray-100 px-3 py-1 rounded-full">加密只读</span>
 						</h1>
 						<p class="text-gray-500 mt-1 text-sm flex items-center gap-2">
@@ -63,7 +63,7 @@
 							<i class="fa-solid fa-upload"></i> 导入
 							<input type="file" accept=".json,application/json" @change="importBackup" class="hidden">
 						</label>
-						<button @click="refreshAllAddresses" class="text-white px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm active:scale-95 select-none cursor-pointer" :class="isRefreshingAll ? 'bg-red-500 hover:bg-red-600 active:bg-red-700' : 'bg-orange-500 hover:bg-orange-600 active:bg-orange-700'" style="touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-user-select: none;">
+						<button @click="refreshAllAddresses(false)" class="text-white px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm active:scale-95 select-none cursor-pointer" :class="isRefreshingAll ? 'bg-red-500 hover:bg-red-600 active:bg-red-700' : 'bg-orange-500 hover:bg-orange-600 active:bg-orange-700'" style="touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-user-select: none;">
 							<i class="fa-solid" :class="isRefreshingAll ? 'fa-stop' : 'fa-rotate'"></i>
 							<span>{{ isRefreshingAll ? '停止刷新' : '全部刷新' }}</span>
 						</button>
@@ -996,6 +996,8 @@
 					}
 
 					async function refreshAllAddresses(isAutoRefresh = false) {
+						console.log(`refreshAllAddresses 调用: isAutoRefresh=${isAutoRefresh}`);
+
 						// 如果正在刷新，点击则取消刷新
 						if (isRefreshingAll.value) {
 							shouldCancelRefresh.value = true;
@@ -1011,6 +1013,9 @@
 								console.log('自动刷新：距离上次刷新不足3天，跳过本次自动刷新');
 								return;
 							}
+							console.log('自动刷新：通过3天检查，开始刷新');
+						} else {
+							console.log('手动刷新：无时间限制，直接开始刷新');
 						}
 
 						isRefreshingAll.value = true;
