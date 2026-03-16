@@ -18,7 +18,7 @@
 
 访问：https://agileaq.github.io/WatchWallet/
 
-## PWA安装
+## PWA安装 (手机应用安装方法)
 
 ### iOS (Safari)
 1. 在Safari中打开应用
