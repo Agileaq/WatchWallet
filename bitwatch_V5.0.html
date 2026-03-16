@@ -850,7 +850,7 @@
 							try {
 								console.log(`尝试获取费率: ${source.name}`);
 								const controller = new AbortController();
-								const timeoutId = setTimeout(() => controller.abort(), 5000);
+								const timeoutId = setTimeout(() => controller.abort(), 2000);
 
 								const res = await fetch(source.url, { signal: controller.signal });
 								clearTimeout(timeoutId);
@@ -898,7 +898,7 @@
 							try {
 								console.log(`尝试获取汇率: ${source.name}`);
 								const controller = new AbortController();
-								const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
+								const timeoutId = setTimeout(() => controller.abort(), 2000); // 2秒超时
 
 								const res = await fetch(source.url, { signal: controller.signal });
 								clearTimeout(timeoutId);
