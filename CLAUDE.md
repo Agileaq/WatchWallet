@@ -6,14 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 BitWatch (比特观察) is a single-file Bitcoin wallet observation tool built as a Progressive Web App. It allows users to track multiple Bitcoin addresses and view real-time on-chain data without managing private keys. All data is encrypted and stored locally in the browser.
 
-**Architecture**: Single-page HTML application with Vue.js 3 Composition API, Tailwind CSS, and Web Crypto API. No build process required.
+**Architecture**: Single-page HTML application with Vue.js 3 Composition API, Tailwind CSS, and Web Crypto API. No build process required. All dependencies are self-hosted for long-term stability.
 
 ## Key Files
 
-- **bitwatch_V3.1.html** - Main application file containing all HTML, CSS, Vue.js logic, and WebAuthn implementation (~1200 lines)
+- **bitwatch_V4.1.html** - Main application file containing all HTML, CSS, Vue.js logic, and WebAuthn implementation (~1200 lines)
 - **sw.js** - Service Worker for offline caching and PWA support
 - **manifest.json** - PWA manifest for iOS/Android home screen installation
 - **index.html** - Simple redirect page to latest version
+- **libs/** - Self-hosted libraries (Tailwind CSS, Vue.js, Font Awesome)
 
 ## Development Workflow
 
@@ -23,10 +24,10 @@ BitWatch (比特观察) is a single-file Bitcoin wallet observation tool built a
 python3 -m http.server 8080
 
 # Access on same device
-http://localhost:8080/bitwatch_V3.1.html
+http://localhost:8080/bitwatch_V4.1.html
 
 # Access from mobile device (iPhone)
-http://[YOUR_MAC_IP]:8080/bitwatch_V3.1.html
+http://[YOUR_MAC_IP]:8080/bitwatch_V4.1.html
 ```
 
 ### Deployment
@@ -37,7 +38,15 @@ git commit -m "Your commit message"
 git push origin main
 ```
 
-Access at: `https://[username].github.io/WatchWallet/bitwatch_V3.1.html`
+Access at: `https://[username].github.io/WatchWallet/`
+
+### Self-Hosted Libraries
+All JavaScript and CSS dependencies are hosted locally in the `libs/` directory:
+- **libs/js/** - Vue.js 3.5.22 (153KB), Tailwind CSS 4.1.13 (250KB)
+- **libs/css/** - Font Awesome 6.4.0 CSS (100KB)
+- **libs/webfonts/** - Font Awesome font files (woff2 format, ~276KB total)
+
+This ensures the application works indefinitely without external CDN dependencies.
 
 ## Code Architecture
 
