@@ -1,9 +1,12 @@
-const CACHE_NAME = 'bitwatch-v4.0';
+const CACHE_NAME = 'bitwatch-v4.1';
 const urlsToCache = [
-  './bitwatch_V4.0.html',
-  'https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/tailwindcss-browser/4.1.13/index.global.min.js',
-  'https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-  'https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/vue/3.5.22/vue.global.prod.min.js'
+  './bitwatch_V4.1.html',
+  './libs/js/tailwind.min.js',
+  './libs/js/vue.min.js',
+  './libs/css/fontawesome.min.css',
+  './libs/webfonts/fa-brands-400.woff2',
+  './libs/webfonts/fa-regular-400.woff2',
+  './libs/webfonts/fa-solid-900.woff2'
 ];
 
 // 安装Service Worker并缓存资源

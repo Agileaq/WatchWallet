@@ -2,7 +2,7 @@
   "name": "比特观察 - 加密钱包",
   "short_name": "比特观察",
   "description": "比特币钱包地址观察工具，实时追踪链上资产",
-  "start_url": "./bitwatch_V4.0.html",
+  "start_url": "./bitwatch_V4.1.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#f97316",
