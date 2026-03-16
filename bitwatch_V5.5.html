@@ -667,8 +667,8 @@
 					const shouldCancelRefresh = ref(false); // 取消刷新标志
 					const silentCancelRefresh = ref(false); // 静默取消（切后台等场景，不弹alert）
 					const refreshingSet = ref(new Set());
-					const lastRefreshTime = ref('');
 					const lastRefreshTimestamp = ref(parseInt(localStorage.getItem('lastRefreshTimestamp') || '0')); // 上次刷新的时间戳（持久化）
+					const lastRefreshTime = ref(lastRefreshTimestamp.value ? new Date(lastRefreshTimestamp.value).toLocaleString() : '');
 					const detailAddress = ref(null);
 					const transactions = ref([]);
 					const loadingTx = ref(false);
