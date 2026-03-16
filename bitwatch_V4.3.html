@@ -991,7 +991,7 @@
 						}
 					}
 
-					async function refreshAllAddresses() {
+					async function refreshAllAddresses(isAutoRefresh = false) {
 						// 如果正在刷新，点击则取消刷新
 						if (isRefreshingAll.value) {
 							shouldCancelRefresh.value = true;
@@ -999,20 +999,14 @@
 							return;
 						}
 
-						// 检查距离上次刷新是否超过3天（3天 = 3 * 24 * 60 * 60 * 1000 毫秒）
-						const threeDaysInMs = 3 * 24 * 60 * 60 * 1000;
-						const now = Date.now();
-						if (lastRefreshTimestamp.value && (now - lastRefreshTimestamp.value) < threeDaysInMs) {
-							const lastRefreshDate = new Date(lastRefreshTimestamp.value);
-							const nextRefreshDate = new Date(lastRefreshTimestamp.value + threeDaysInMs);
-							alert(
-								`⏳ 刷新冷却中\n\n` +
-								`上次刷新时间：${lastRefreshDate.toLocaleString()}\n` +
-								`下次可刷新时间：${nextRefreshDate.toLocaleString()}\n\n` +
-								`为保护API服务稳定性，全量刷新间隔需要3天。`
-							);
-							console.log('距离上次刷新不足3天，跳过刷新');
-							return;
+						// 仅对自动刷新进行3天限制，手动刷新不受限制
+						if (isAutoRefresh) {
+							const threeDaysInMs = 3 * 24 * 60 * 60 * 1000;
+							const now = Date.now();
+							if (lastRefreshTimestamp.value && (now - lastRefreshTimestamp.value) < threeDaysInMs) {
+								console.log('自动刷新：距离上次刷新不足3天，跳过本次自动刷新');
+								return;
+							}
 						}
 
 						isRefreshingAll.value = true;
@@ -1199,10 +1193,10 @@
 								showEnableBiometric.value = true;
 							}
 
-							// 自动刷新
+							// 自动刷新（受3天限制）
 							if (addressList.value.length > 0) {
 								setTimeout(() => {
-									refreshAllAddresses().catch(console.error);
+									refreshAllAddresses(true).catch(console.error);
 								}, 500);
 							}
 						} catch (e) {
