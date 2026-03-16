@@ -1,6 +1,6 @@
-const CACHE_NAME = 'bitwatch-v5.0';
+const CACHE_NAME = 'bitwatch-v5.1';
 const urlsToCache = [
-  './bitwatch_V5.0.html',
+  './bitwatch_V5.1.html',
   './libs/js/tailwind.min.js',
   './libs/js/vue.min.js',
   './libs/css/fontawesome.min.css',
