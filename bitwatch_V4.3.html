@@ -701,7 +701,7 @@
 								fetch: async () => {
 									const url = `${MEMPOOL_BASE}/address/${address}`;
 									const controller = new AbortController();
-									const timeoutId = setTimeout(() => controller.abort(), 8000);
+									const timeoutId = setTimeout(() => controller.abort(), 2000);
 									try {
 										const res = await fetch(url, { signal: controller.signal });
 										clearTimeout(timeoutId);
@@ -723,7 +723,7 @@
 								fetch: async () => {
 									const url = `https://blockchain.info/balance?active=${address}`;
 									const controller = new AbortController();
-									const timeoutId = setTimeout(() => controller.abort(), 8000);
+									const timeoutId = setTimeout(() => controller.abort(), 2000);
 									try {
 										const res = await fetch(url, { signal: controller.signal });
 										clearTimeout(timeoutId);
@@ -746,7 +746,7 @@
 								fetch: async () => {
 									const url = `https://blockstream.info/api/address/${address}`;
 									const controller = new AbortController();
-									const timeoutId = setTimeout(() => controller.abort(), 8000);
+									const timeoutId = setTimeout(() => controller.abort(), 2000);
 									try {
 										const res = await fetch(url, { signal: controller.signal });
 										clearTimeout(timeoutId);
