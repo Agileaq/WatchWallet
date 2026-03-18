@@ -700,31 +700,8 @@
 					const MEMPOOL_BASE = 'https://mempool.space/api';
 
 					async function fetchAddressBalance(address) {
-						// 多数据源配置（优先使用blockchain.info）
+						// 多数据源配置（优先使用mempool.space，提供准确的未确认余额）
 						const sources = [
-							{
-								name: 'blockchain.info',
-								fetch: async () => {
-									const url = `https://blockchain.info/balance?active=${address}`;
-									const controller = new AbortController();
-									const timeoutId = setTimeout(() => controller.abort(), 2000);
-									try {
-										const res = await fetch(url, { signal: controller.signal });
-										clearTimeout(timeoutId);
-										if (!res.ok) throw new Error(`HTTP ${res.status}`);
-										const data = await res.json();
-										const addrData = data[address];
-										if (!addrData) throw new Error('No data for address');
-										return {
-											balance: addrData.final_balance || 0,
-											unconfirmedBalance: (addrData.total_received - addrData.final_balance) || 0
-										};
-									} catch (e) {
-										clearTimeout(timeoutId);
-										throw e;
-									}
-								}
-							},
 							{
 								name: 'mempool.space',
 								fetch: async () => {
@@ -763,6 +740,29 @@
 										const balance = (chain.funded_txo_sum || 0) - (chain.spent_txo_sum || 0);
 										const unconfirmedBalance = (mempool.funded_txo_sum || 0) - (mempool.spent_txo_sum || 0);
 										return { balance, unconfirmedBalance };
+									} catch (e) {
+										clearTimeout(timeoutId);
+										throw e;
+									}
+								}
+							},
+							{
+								name: 'blockchain.info',
+								fetch: async () => {
+									const url = `https://blockchain.info/balance?active=${address}`;
+									const controller = new AbortController();
+									const timeoutId = setTimeout(() => controller.abort(), 2000);
+									try {
+										const res = await fetch(url, { signal: controller.signal });
+										clearTimeout(timeoutId);
+										if (!res.ok) throw new Error(`HTTP ${res.status}`);
+										const data = await res.json();
+										const addrData = data[address];
+										if (!addrData) throw new Error('No data for address');
+										return {
+											balance: addrData.final_balance || 0,
+											unconfirmedBalance: 0 // blockchain.info /balance 端点不提供未确认余额
+										};
 									} catch (e) {
 										clearTimeout(timeoutId);
 										throw e;
