@@ -1013,15 +1013,15 @@
 							return;
 						}
 
-						// 仅对自动刷新进行3天限制，手动刷新不受限制
+						// 仅对自动刷新进行24小时限制，手动刷新不受限制
 						if (isAutoRefresh) {
-							const threeDaysInMs = 3 * 24 * 60 * 60 * 1000;
+							const oneDayInMs = 24 * 60 * 60 * 1000;
 							const now = Date.now();
-							if (lastRefreshTimestamp.value && (now - lastRefreshTimestamp.value) < threeDaysInMs) {
-								console.log('自动刷新：距离上次刷新不足3天，跳过本次自动刷新');
+							if (lastRefreshTimestamp.value && (now - lastRefreshTimestamp.value) < oneDayInMs) {
+								console.log('自动刷新：距离上次刷新不足24小时，跳过本次自动刷新');
 								return;
 							}
-							console.log('自动刷新：通过3天检查，开始刷新');
+							console.log('自动刷新：通过24小时检查，开始刷新');
 						} else {
 							console.log('手动刷新：无时间限制，直接开始刷新');
 						}
@@ -1215,7 +1215,7 @@
 								showEnableBiometric.value = true;
 							}
 
-							// 自动刷新（受3天限制）
+							// 自动刷新（受24小时限制）
 							if (addressList.value.length > 0) {
 								setTimeout(() => {
 									refreshAllAddresses(true).catch(console.error);
