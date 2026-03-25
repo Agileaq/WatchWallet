@@ -707,7 +707,7 @@
 								fetch: async () => {
 									const url = `${MEMPOOL_BASE}/address/${address}`;
 									const controller = new AbortController();
-									const timeoutId = setTimeout(() => controller.abort(), 2000);
+									const timeoutId = setTimeout(() => controller.abort(), 1000);
 									try {
 										const res = await fetch(url, { signal: controller.signal });
 										clearTimeout(timeoutId);
@@ -729,7 +729,7 @@
 								fetch: async () => {
 									const url = `https://blockstream.info/api/address/${address}`;
 									const controller = new AbortController();
-									const timeoutId = setTimeout(() => controller.abort(), 2000);
+									const timeoutId = setTimeout(() => controller.abort(), 1000);
 									try {
 										const res = await fetch(url, { signal: controller.signal });
 										clearTimeout(timeoutId);
@@ -751,7 +751,7 @@
 								fetch: async () => {
 									const url = `https://blockchain.info/balance?active=${address}`;
 									const controller = new AbortController();
-									const timeoutId = setTimeout(() => controller.abort(), 2000);
+									const timeoutId = setTimeout(() => controller.abort(), 1000);
 									try {
 										const res = await fetch(url, { signal: controller.signal });
 										clearTimeout(timeoutId);
@@ -855,7 +855,7 @@
 							try {
 								console.log(`尝试获取费率: ${source.name}`);
 								const controller = new AbortController();
-								const timeoutId = setTimeout(() => controller.abort(), 2000);
+								const timeoutId = setTimeout(() => controller.abort(), 1000);
 
 								const res = await fetch(source.url, { signal: controller.signal });
 								clearTimeout(timeoutId);
@@ -903,7 +903,7 @@
 							try {
 								console.log(`尝试获取汇率: ${source.name}`);
 								const controller = new AbortController();
-								const timeoutId = setTimeout(() => controller.abort(), 2000); // 2秒超时
+								const timeoutId = setTimeout(() => controller.abort(), 1000); // 1秒超时
 
 								const res = await fetch(source.url, { signal: controller.signal });
 								clearTimeout(timeoutId);
