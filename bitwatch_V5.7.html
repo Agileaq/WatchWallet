@@ -47,7 +47,7 @@
 					<div>
 						<h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
 							<i class="fa-brands fa-bitcoin text-orange-500"></i>
-							比特观察 <span class="text-lg font-normal text-orange-500">V5.6</span>
+							比特观察 <span class="text-lg font-normal text-orange-500">V5.7</span>
 							<span class="text-sm font-normal text-gray-400 bg-gray-100 px-3 py-1 rounded-full">加密只读</span>
 						</h1>
 						<p class="text-gray-500 mt-1 text-sm flex items-center gap-2">
@@ -215,7 +215,7 @@
 				<div class="text-center mb-6">
 					<div class="flex items-center justify-center gap-2 mb-3">
 						<i class="fa-brands fa-bitcoin text-5xl text-orange-400"></i>
-						<span class="text-xs text-gray-400 font-mono mt-4">V5.6</span>
+						<span class="text-xs text-gray-400 font-mono mt-4">V5.7</span>
 					</div>
 					<h2 class="text-2xl font-bold text-gray-800">{{ webAuthnEnabled ? 'Face ID 解锁' : '输入密码解锁' }}</h2>
 					<p class="text-gray-400 text-sm mt-1">本地加密 · 数据仅存于此设备</p>
@@ -852,10 +852,11 @@
 						];
 
 						for (const source of sources) {
+							let timeoutId;
 							try {
 								console.log(`尝试获取费率: ${source.name}`);
 								const controller = new AbortController();
-								const timeoutId = setTimeout(() => controller.abort(), 1000);
+								timeoutId = setTimeout(() => controller.abort(), 1000);
 
 								const res = await fetch(source.url, { signal: controller.signal });
 								clearTimeout(timeoutId);
@@ -866,6 +867,7 @@
 								console.log(`费率获取成功 (${source.name}):`, fees);
 								return fees;
 							} catch (e) {
+								if (timeoutId) clearTimeout(timeoutId);
 								console.warn(`${source.name} 费率获取失败:`, e.message);
 							}
 						}
@@ -900,10 +902,11 @@
 						];
 
 						for (const source of sources) {
+							let timeoutId;
 							try {
 								console.log(`尝试获取汇率: ${source.name}`);
 								const controller = new AbortController();
-								const timeoutId = setTimeout(() => controller.abort(), 1000); // 1秒超时
+								timeoutId = setTimeout(() => controller.abort(), 1000); // 1秒超时
 
 								const res = await fetch(source.url, { signal: controller.signal });
 								clearTimeout(timeoutId);
@@ -916,6 +919,7 @@
 									return rate;
 								}
 							} catch (e) {
+								if (timeoutId) clearTimeout(timeoutId);
 								console.warn(`${source.name} 获取失败:`, e.message);
 							}
 						}
