@@ -67,6 +67,10 @@
 							<i class="fa-solid" :class="isRefreshingAll ? 'fa-stop' : 'fa-rotate'"></i>
 							<span>{{ isRefreshingAll ? '停止刷新' : '全部刷新' }}</span>
 						</button>
+						<button v-if="feeLoadFailed && !isFeeLoading" @click="refreshFees" class="bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm active:scale-95 select-none cursor-pointer" style="touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-user-select: none;" title="费率加载失败，点击重试">
+							<i class="fa-solid fa-wifi"></i>
+							<span>刷新费率</span>
+						</button>
 					</div>
 				</div>
 				<!-- 总资产卡片 -->
@@ -88,25 +92,25 @@
 				</div>
 
 				<!-- 费率卡片 -->
-				<div v-if="fees" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-					<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+				<div v-if="isFeeLoading" class="h-16 mb-8 skeleton rounded-xl"></div>
+				<div v-else class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+					<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm" :class="feeLoadFailed ? 'opacity-60' : ''">
 						<div class="text-xs text-gray-400 flex items-center gap-1"><i class="fa-regular fa-clock"></i> 最快</div>
-						<div class="text-xl font-bold text-gray-800">{{ fees.fastestFee }} <span class="text-sm font-normal text-gray-400">sat/vB</span></div>
+						<div class="text-xl font-bold" :class="feeLoadFailed ? 'text-gray-400' : 'text-gray-800'">{{ fees ? fees.fastestFee : 'N/A' }} <span class="text-sm font-normal text-gray-400">sat/vB</span></div>
 					</div>
-					<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+					<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm" :class="feeLoadFailed ? 'opacity-60' : ''">
 						<div class="text-xs text-gray-400">一小时</div>
-						<div class="text-xl font-bold text-gray-800">{{ fees.hourFee }} <span class="text-sm font-normal text-gray-400">sat/vB</span></div>
+						<div class="text-xl font-bold" :class="feeLoadFailed ? 'text-gray-400' : 'text-gray-800'">{{ fees ? fees.hourFee : 'N/A' }} <span class="text-sm font-normal text-gray-400">sat/vB</span></div>
 					</div>
-					<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+					<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm" :class="feeLoadFailed ? 'opacity-60' : ''">
 						<div class="text-xs text-gray-400">经济</div>
-						<div class="text-xl font-bold text-gray-800">{{ fees.economyFee }} <span class="text-sm font-normal text-gray-400">sat/vB</span></div>
+						<div class="text-xl font-bold" :class="feeLoadFailed ? 'text-gray-400' : 'text-gray-800'">{{ fees ? fees.economyFee : 'N/A' }} <span class="text-sm font-normal text-gray-400">sat/vB</span></div>
 					</div>
-					<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+					<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm" :class="feeLoadFailed ? 'opacity-60' : ''">
 						<div class="text-xs text-gray-400">最低</div>
-						<div class="text-xl font-bold text-gray-800">{{ fees.minimumFee }} <span class="text-sm font-normal text-gray-400">sat/vB</span></div>
+						<div class="text-xl font-bold" :class="feeLoadFailed ? 'text-gray-400' : 'text-gray-800'">{{ fees ? fees.minimumFee : 'N/A' }} <span class="text-sm font-normal text-gray-400">sat/vB</span></div>
 					</div>
 				</div>
-				<div v-else class="h-16 mb-8 skeleton rounded-xl"></div>
 
 				<!-- 添加地址表单 -->
 				<div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
@@ -663,6 +667,8 @@
 					const newLabelInput = ref('');
 					const addressError = ref('');
 					const fees = ref(null);
+					const isFeeLoading = ref(false);
+					const feeLoadFailed = ref(false);
 					const isRefreshingAll = ref(false);
 					const shouldCancelRefresh = ref(false); // 取消刷新标志
 					const silentCancelRefresh = ref(false); // 静默取消（切后台等场景，不弹alert）
@@ -1207,11 +1213,21 @@
 							}
 
 							// 加载费率和汇率
+							isFeeLoading.value = true;
+							feeLoadFailed.value = false;
 							try {
-								fees.value = await fetchFeeEstimates();
+								const result = await fetchFeeEstimates();
+								if (result) {
+									fees.value = result;
+								} else {
+									feeLoadFailed.value = true;
+								}
 								btcToCnyRate.value = await fetchBtcToCnyRate();
 							} catch (e) {
 								console.warn('费率获取失败', e);
+								feeLoadFailed.value = true;
+							} finally {
+								isFeeLoading.value = false;
 							}
 
 							// 解锁成功后，询问是否启用生物识别
@@ -1327,12 +1343,39 @@
 						}
 					}
 
-					// 初始化加载费率
-					onMounted(async () => {
+					async function refreshFees() {
+						isFeeLoading.value = true;
+						feeLoadFailed.value = false;
 						try {
-							fees.value = await fetchFeeEstimates();
+							const result = await fetchFeeEstimates();
+							if (result) {
+								fees.value = result;
+							} else {
+								feeLoadFailed.value = true;
+							}
 						} catch (e) {
 							console.warn('费率获取失败', e);
+							feeLoadFailed.value = true;
+						} finally {
+							isFeeLoading.value = false;
+						}
+					}
+
+					// 初始化加载费率
+					onMounted(async () => {
+						isFeeLoading.value = true;
+						try {
+							const result = await fetchFeeEstimates();
+							if (result) {
+								fees.value = result;
+							} else {
+								feeLoadFailed.value = true;
+							}
+						} catch (e) {
+							console.warn('费率获取失败', e);
+							feeLoadFailed.value = true;
+						} finally {
+							isFeeLoading.value = false;
 						}
 
 						// 调试：检查当前存储的数据
@@ -1388,6 +1431,9 @@
 						addressError,
 						isAddressInputValid,
 						fees,
+						isFeeLoading,
+						feeLoadFailed,
+						refreshFees,
 						btcToCnyRate,
 						isRefreshingAll,
 						refreshingSet,
