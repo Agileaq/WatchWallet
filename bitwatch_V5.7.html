@@ -57,19 +57,19 @@
 					</div>
 					<div class="flex gap-2 w-full md:w-auto">
 						<button @click="exportBackup" class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition flex items-center gap-2 shadow-sm">
-							<i class="fa-solid fa-download"></i> 导出列表
+							<i class="fa-solid fa-upload"></i> 导出
 						</button>
 						<label class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition flex items-center gap-2 shadow-sm cursor-pointer">
-							<i class="fa-solid fa-upload"></i> 导入
+							<i class="fa-solid fa-download"></i> 导入
 							<input type="file" accept=".json,application/json" @change="importBackup" class="hidden">
 						</label>
 						<button @click="refreshAllAddresses(false)" class="text-white px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm active:scale-95 select-none cursor-pointer" :class="isRefreshingAll ? 'bg-red-500 hover:bg-red-600 active:bg-red-700' : 'bg-orange-500 hover:bg-orange-600 active:bg-orange-700'" style="touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-user-select: none;">
 							<i class="fa-solid" :class="isRefreshingAll ? 'fa-stop' : 'fa-rotate'"></i>
-							<span>{{ isRefreshingAll ? '停止刷新' : '全部刷新' }}</span>
+							<span>{{ isRefreshingAll ? '停止刷新' : '余额' }}</span>
 						</button>
 						<button v-if="feeLoadFailed && !isFeeLoading" @click="refreshFees" class="bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm active:scale-95 select-none cursor-pointer" style="touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-user-select: none;" title="费率加载失败，点击重试">
-							<i class="fa-solid fa-wifi"></i>
-							<span>刷新费率</span>
+							<i class="fa-solid fa-rotate"></i>
+							<span>费率</span>
 						</button>
 					</div>
 				</div>
