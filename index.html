@@ -58,9 +58,9 @@
 			<div v-if="updateAvailable" class="fixed left-0 right-0 z-[280] flex justify-center px-4"
 				style="bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);">
 				<div class="w-full max-w-md bg-orange-500 text-white rounded-xl shadow-lg px-4 py-3 flex items-center justify-between gap-3">
-					<span class="text-sm font-medium">发现新版本</span>
+					<span class="text-sm font-medium">{{ t('update_available') }}</span>
 					<button @click="applyUpdate" class="bg-white/20 hover:bg-white/30 rounded-lg px-4 py-1.5 font-bold text-sm transition flex-shrink-0">
-						更新
+						{{ t('btn_update') }}
 					</button>
 				</div>
 			</div>
@@ -72,29 +72,29 @@
 					<div>
 						<h1 class="text-3xl font-bold text-gray-800 flex items-center gap-3">
 							<i class="fa-brands fa-bitcoin text-orange-500"></i>
-							大饼观察Only <span class="text-lg font-normal text-orange-500">{{ VERSION }}</span>
-							<span class="text-sm font-normal text-gray-400 bg-gray-100 px-3 py-1 rounded-full">加密只读</span>
+							{{ t('app_title') }} <span class="text-lg font-normal text-orange-500">{{ VERSION }}</span>
+							<span class="text-sm font-normal text-gray-400 bg-gray-100 px-3 py-1 rounded-full">{{ t('badge_readonly') }}</span>
 						</h1>
 						<p class="text-gray-500 mt-1 text-sm flex items-center gap-2">
-						<i class="fa-regular fa-eye"></i> 多数据源保证: mempool, blockstream, blockchain
+						<i class="fa-regular fa-eye"></i> {{ t('app_subtitle') }}
 						<span class="inline-block w-2 h-2 bg-green-400 rounded-full"></span>
 						</p>
 					</div>
 					<div class="flex gap-2 w-full md:w-auto">
 						<button @click="exportBackup" class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition flex items-center gap-2 shadow-sm">
-							<i class="fa-solid fa-upload"></i> 导出
+							<i class="fa-solid fa-upload"></i> {{ t('btn_export') }}
 						</button>
 						<label class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition flex items-center gap-2 shadow-sm cursor-pointer">
-							<i class="fa-solid fa-download"></i> 导入
+							<i class="fa-solid fa-download"></i> {{ t('btn_import') }}
 							<input type="file" accept=".json,application/json" @change="importBackup" class="hidden">
 						</label>
 						<button @click="refreshAllAddresses(false)" class="text-white px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm active:scale-95 select-none cursor-pointer" :class="isRefreshingAll ? 'bg-red-500 hover:bg-red-600 active:bg-red-700' : 'bg-orange-500 hover:bg-orange-600 active:bg-orange-700'" style="touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-user-select: none;">
 							<i class="fa-solid" :class="isRefreshingAll ? 'fa-stop' : 'fa-rotate'"></i>
-							<span>{{ isRefreshingAll ? '停止刷新' : '余额' }}</span>
+							<span>{{ isRefreshingAll ? t('btn_stop_refresh') : t('btn_balance') }}</span>
 						</button>
 						<button v-if="feeLoadFailed || isFeeLoading" @click="refreshFees" class="text-white px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm active:scale-95 select-none cursor-pointer" :class="isFeeLoading ? 'bg-red-500 hover:bg-red-600 active:bg-red-700' : 'bg-amber-500 hover:bg-amber-600 active:bg-amber-700'" style="touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-user-select: none;" :title="isFeeLoading ? '点击停止' : '费率加载失败，点击重试'">
 							<i class="fa-solid" :class="isFeeLoading ? 'fa-stop' : 'fa-rotate'"></i>
-							<span>{{ isFeeLoading ? '停止刷新' : '费率' }}</span>
+							<span>{{ isFeeLoading ? t('btn_stop_refresh') : t('btn_fees') }}</span>
 						</button>
 					</div>
 				</div>
@@ -102,7 +102,7 @@
 				<div class="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 border border-orange-100 shadow-sm mb-8">
 					<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
 						<div>
-							<span class="text-sm text-orange-600 font-medium">总余额 (仅已确认)</span>
+							<span class="text-sm text-orange-600 font-medium">{{ t('total_balance') }}</span>
 							<div class="text-4xl font-bold text-gray-800 mt-1">{{ totalBalance.toLocaleString() }} <span class="text-base font-normal text-gray-500">sats</span></div>
 							<div class="text-sm text-gray-500 mt-1">
 								<i class="fa-regular fa-circle-dot"></i> ≈ {{ (totalBalance / 100000000).toFixed(8) }} BTC
@@ -110,8 +110,8 @@
 							</div>
 						</div>
 						<div class="text-right text-sm text-gray-500">
-							<div><i class="fa-regular fa-clock"></i> 上次全量刷新: {{ lastRefreshTime || '尚未' }}</div>
-							<div class="mt-1"><span class="bg-white px-3 py-1 rounded-full text-xs">观察中 {{ addressList.length }} 个地址</span></div>
+							<div><i class="fa-regular fa-clock"></i> {{ t('last_refresh') }}: {{ lastRefreshTime || t('last_refresh_never') }}</div>
+							<div class="mt-1"><span class="bg-white px-3 py-1 rounded-full text-xs">{{ t('watching_count', addressList.length) }}</span></div>
 						</div>
 					</div>
 				</div>
@@ -120,59 +120,59 @@
 				<div v-if="isFeeLoading" class="h-16 mb-8 skeleton rounded-xl"></div>
 				<div v-else class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
 					<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm" :class="feeLoadFailed ? 'opacity-60' : ''">
-						<div class="text-xs text-gray-400 flex items-center gap-1"><i class="fa-regular fa-clock"></i> 最快</div>
+						<div class="text-xs text-gray-400 flex items-center gap-1"><i class="fa-regular fa-clock"></i> {{ t('fee_fastest') }}</div>
 						<div class="text-xl font-bold" :class="feeLoadFailed ? 'text-gray-400' : 'text-gray-800'">{{ fees ? fees.fastestFee : 'N/A' }} <span class="text-sm font-normal text-gray-400">sat/vB</span></div>
 					</div>
 					<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm" :class="feeLoadFailed ? 'opacity-60' : ''">
-						<div class="text-xs text-gray-400">一小时</div>
+						<div class="text-xs text-gray-400">{{ t('fee_hour') }}</div>
 						<div class="text-xl font-bold" :class="feeLoadFailed ? 'text-gray-400' : 'text-gray-800'">{{ fees ? fees.hourFee : 'N/A' }} <span class="text-sm font-normal text-gray-400">sat/vB</span></div>
 					</div>
 					<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm" :class="feeLoadFailed ? 'opacity-60' : ''">
-						<div class="text-xs text-gray-400">经济</div>
+						<div class="text-xs text-gray-400">{{ t('fee_economy') }}</div>
 						<div class="text-xl font-bold" :class="feeLoadFailed ? 'text-gray-400' : 'text-gray-800'">{{ fees ? fees.economyFee : 'N/A' }} <span class="text-sm font-normal text-gray-400">sat/vB</span></div>
 					</div>
 					<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm" :class="feeLoadFailed ? 'opacity-60' : ''">
-						<div class="text-xs text-gray-400">最低</div>
+						<div class="text-xs text-gray-400">{{ t('fee_minimum') }}</div>
 						<div class="text-xl font-bold" :class="feeLoadFailed ? 'text-gray-400' : 'text-gray-800'">{{ fees ? fees.minimumFee : 'N/A' }} <span class="text-sm font-normal text-gray-400">sat/vB</span></div>
 					</div>
 				</div>
 
 				<!-- 添加地址表单 -->
 				<div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
-					<h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2"><i class="fa-regular fa-plus"></i> 添加观察地址</h2>
+					<h2 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2"><i class="fa-regular fa-plus"></i> {{ t('add_address_title') }}</h2>
 					<div class="flex flex-col sm:flex-row gap-3">
-						<input type="text" v-model="newAddressInput" placeholder="比特币地址 (以1、3或bc1开头)" 
+						<input type="text" v-model="newAddressInput" :placeholder="t('placeholder_address')"
 																	 class="flex-1 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-200 focus:border-orange-300 outline-none transition">
-						<input type="text" v-model="newLabelInput" placeholder="标签 (可选)" 
+						<input type="text" v-model="newLabelInput" :placeholder="t('placeholder_label')"
 																   class="sm:w-48 border border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-orange-200 focus:border-orange-300 outline-none transition">
 						<button @click="addNewAddress" :disabled="!isAddressInputValid" 
 																   class="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-xl font-medium transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm">
-							<i class="fa-regular fa-bookmark"></i> 添加
+							<i class="fa-regular fa-bookmark"></i> {{ t('btn_add') }}
 						</button>
 					</div>
 					<p v-if="addressError" class="text-red-500 text-sm mt-2"><i class="fa-solid fa-circle-exclamation"></i> {{ addressError }}</p>
-					<p v-if="!isAddressInputValid && newAddressInput.length > 0" class="text-amber-500 text-sm mt-2">地址格式建议: 1... / 3... / bc1... (长度26~62)</p>
+					<p v-if="!isAddressInputValid && newAddressInput.length > 0" class="text-amber-500 text-sm mt-2">{{ t('addr_format_hint') }}</p>
 				</div>
 
 
 				<!-- 地址列表网格 -->
 				<div v-if="addressList.length === 0" class="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-200">
 					<i class="fa-regular fa-face-frown text-5xl text-gray-300 mb-4"></i>
-					<p class="text-gray-400 text-lg">还没有添加观察地址</p>
-					<p class="text-gray-300 text-sm mt-2">在上方输入地址开始追踪</p>
+					<p class="text-gray-400 text-lg">{{ t('addr_empty_title') }}</p>
+					<p class="text-gray-300 text-sm mt-2">{{ t('addr_empty_hint') }}</p>
 				</div>
 
 				<div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
 					<div v-for="item in sortedAddressList" :key="item.address" class="address-card bg-white rounded-2xl p-5 border border-gray-100 shadow-sm transition-all duration-200 relative group">
 						<!-- 操作按钮 -->
 						<div class="absolute top-3 right-3 flex gap-1">
-							<button @click="refreshSingleAddress(item.address)" class="w-8 h-8 bg-white rounded-full border border-gray-200 text-gray-500 hover:text-orange-500 hover:border-orange-200 flex items-center justify-center" :title="'刷新' + (item.label || '地址')">
+							<button @click="refreshSingleAddress(item.address)" class="w-8 h-8 bg-white rounded-full border border-gray-200 text-gray-500 hover:text-orange-500 hover:border-orange-200 flex items-center justify-center" :title="t('refresh_hint') + (item.label || t('address_word'))">
 								<i class="fa-solid fa-rotate text-sm" :class="{'animate-spin': refreshingSet.has(item.address)}"></i>
 							</button>
-							<button @click="showAddressDetail(item)" class="w-8 h-8 bg-white rounded-full border border-gray-200 text-gray-500 hover:text-blue-500 hover:border-blue-200 flex items-center justify-center" title="交易详情">
+							<button @click="showAddressDetail(item)" class="w-8 h-8 bg-white rounded-full border border-gray-200 text-gray-500 hover:text-blue-500 hover:border-blue-200 flex items-center justify-center" :title="t('tx_detail_title')">
 								<i class="fa-regular fa-rectangle-list"></i>
 							</button>
-							<button @click="removeAddress(item.address)" class="w-8 h-8 bg-white rounded-full border border-gray-200 text-gray-500 hover:text-red-500 hover:border-red-200 flex items-center justify-center" title="移除">
+							<button @click="removeAddress(item.address)" class="w-8 h-8 bg-white rounded-full border border-gray-200 text-gray-500 hover:text-red-500 hover:border-red-200 flex items-center justify-center" :title="t('confirm_remove_address')">
 								<i class="fa-regular fa-trash-can"></i>
 							</button>
 						</div>
@@ -189,11 +189,11 @@
 
 						<div class="flex justify-between items-end mt-2">
 							<div>
-								<p class="text-xs text-gray-400">已确认</p>
+								<p class="text-xs text-gray-400">{{ t('confirmed') }}</p>
 								<p class="text-xl font-bold text-gray-800">{{ (item.balance ?? 0).toLocaleString() }} <span class="text-xs font-normal text-gray-400">sats</span></p>
 								<p class="text-xs text-gray-500">≈ {{ ((item.balance ?? 0) / 100000000).toFixed(8) }} BTC</p>
 								<p v-if="item.unconfirmedBalance && item.unconfirmedBalance !== 0" class="text-xs text-amber-500 mt-1">
-								<i class="fa-regular fa-clock"></i> 未确认: {{ item.unconfirmedBalance.toLocaleString() }} sats
+								<i class="fa-regular fa-clock"></i> {{ t('unconfirmed', item.unconfirmedBalance.toLocaleString()) }}
 								</p>
 							</div>
 							<div class="text-right text-xs text-gray-400">
@@ -212,25 +212,25 @@
 					<div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl max-h-[80vh] overflow-hidden">
 						<div class="p-6 border-b border-gray-100 flex justify-between items-center">
 							<div>
-								<h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i class="fa-regular fa-clock"></i> 交易历史</h2>
+								<h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><i class="fa-regular fa-clock"></i> {{ t('tx_history_title') }}</h2>
 								<p class="text-sm text-gray-400 break-all">{{ detailAddress.address }}</p>
 							</div>
 							<button @click="closeDetail" class="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
 						</div>
 						<div class="p-4 overflow-y-auto" style="max-height: 60vh;">
 							<div v-if="loadingTx" class="flex justify-center py-8"><i class="fa-solid fa-spinner fa-spin text-3xl text-orange-300"></i></div>
-							<div v-else-if="transactions.length === 0" class="text-center py-12 text-gray-400"><i class="fa-regular fa-folder-open text-4xl mb-3"></i><p>暂无交易记录</p></div>
+							<div v-else-if="transactions.length === 0" class="text-center py-12 text-gray-400"><i class="fa-regular fa-folder-open text-4xl mb-3"></i><p>{{ t('tx_empty') }}</p></div>
 							<div v-else class="space-y-3">
 								<div v-for="tx in transactions" :key="tx.txid" class="border border-gray-100 rounded-xl p-4 hover:bg-gray-50">
 									<div class="flex justify-between items-start gap-2">
 										<a :href="'https://mempool.space/tx/'+tx.txid" target="_blank" class="text-sm font-mono text-orange-600 truncate hover:underline">{{ tx.txid.slice(0,16) }}…{{ tx.txid.slice(-8) }}</a>
-										<span :class="tx.type === '接收' ? 'text-green-600' : 'text-red-600'" class="text-sm font-medium px-2 py-0.5 bg-gray-100 rounded-full">{{ tx.type }}</span>
+										<span :class="tx.type === 'received' ? 'text-green-600' : (tx.type === 'self' ? 'text-gray-500' : 'text-red-600')" class="text-sm font-medium px-2 py-0.5 bg-gray-100 rounded-full">{{ t('tx_' + tx.type) }}</span>
 									</div>
 									<div class="flex justify-between items-center mt-2 text-sm">
 										<span class="text-gray-500"><i class="fa-regular fa-calendar mr-1"></i>{{ new Date(tx.time * 1000).toLocaleString() }}</span>
 										<span class="font-mono font-bold">{{ (tx.value / 1e8).toFixed(8) }} BTC</span>
 									</div>
-									<div class="text-xs text-gray-400 mt-1">确认数: {{ tx.confirmations }}</div>
+									<div class="text-xs text-gray-400 mt-1">{{ t('tx_confirmations', tx.confirmations) }}</div>
 								</div>
 							</div>
 						</div>
