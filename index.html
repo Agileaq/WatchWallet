@@ -799,6 +799,221 @@
 					const showEnableBiometric = ref(false);
 					const biometricAutoCancelled = ref(false); // 用户手动取消过生物识别，不再自动触发
 
+					// ==================== i18n 国际化 ====================
+					const SUPPORTED_LANGS = [
+						{ code: 'zh', label: '简体中文' },
+						{ code: 'en', label: 'English' },
+						{ code: 'fr', label: 'Français' },
+						{ code: 'es', label: 'Español' },
+						{ code: 'ru', label: 'Русский' },
+						{ code: 'ar', label: 'العربية' },
+					];
+					const LANG_STORAGE_KEY = 'bw-lang';
+					const translations = {
+						zh: {
+							app_title: 'BitWatch',
+							app_subtitle: '多数据源保证: mempool, blockstream, blockchain',
+							badge_readonly: '加密只读',
+							btn_export: '导出',
+							btn_import: '导入',
+							btn_balance: '余额',
+							btn_fees: '费率',
+							btn_stop_refresh: '停止刷新',
+							btn_add: '添加',
+							add_address_title: '添加观察地址',
+							placeholder_address: '比特币地址 (以1、3或bc1开头)',
+							placeholder_label: '标签 (可选)',
+							addr_format_hint: '地址格式建议: 1... / 3... / bc1... (长度26~62)',
+							addr_format_invalid: '地址格式不正确',
+							addr_exists: '地址已存在',
+							addr_empty_title: '还没有添加观察地址',
+							addr_empty_hint: '在上方输入地址开始追踪',
+							refresh_hint: '刷新',
+							address_word: '地址',
+							tx_detail_title: '交易详情',
+							tx_history_title: '交易历史',
+							tx_empty: '暂无交易记录',
+							tx_confirmations: '确认数: {0}',
+							tx_received: '接收',
+							tx_sent: '发送',
+							tx_self: '自我',
+							total_balance: '总余额 (仅已确认)',
+							last_refresh: '上次全量刷新',
+							last_refresh_never: '尚未',
+							watching_count: '观察中 {0} 个地址',
+							confirmed: '已确认',
+							unconfirmed: '未确认: {0} sats',
+							fee_fastest: '最快',
+							fee_hour: '一小时',
+							fee_economy: '经济',
+							fee_minimum: '最低',
+							update_available: '发现新版本',
+							btn_update: '更新',
+							unlock_faceid: 'Face ID 解锁',
+							unlock_password: '输入密码解锁',
+							unlock_local_hint: '本地加密 · 数据仅存于此设备',
+							placeholder_password: '请输入本地密码',
+							btn_use_faceid: '使用 Face ID / Touch ID',
+							unlock_tap_hint: '轻触开始验证',
+							unlock_verifying: '验证中...',
+							unlock_in_progress: '解锁中...',
+							unlock_btn: '解锁',
+							use_password_instead: '使用密码解锁',
+							disable_biometric: '禁用 Face ID / Touch ID',
+							first_use_hint: '首次使用：输入任意密码创建加密存储<br>请记住密码，数据将用AES-GCM加密保存在本地',
+							enable_biometric_title: '启用 Face ID / Touch ID？',
+							enable_biometric_desc: '下次打开应用时，您可以使用生物识别快速解锁，无需输入密码。',
+							enable_biometric_security: '您的密码将使用AES-256加密存储在本地，仅Face ID验证通过后才能访问。',
+							btn_enable_biometric: '启用生物识别',
+							enabling_in_progress: '设置中...',
+							btn_skip: '暂不启用',
+							// --- JS messages ---
+							msg_fee_failed: '费率获取失败：所有数据源均不可用',
+							msg_rate_cache_write_failed: '写入汇率缓存失败',
+							msg_save_failed: '保存加密数据失败',
+							msg_addr_refresh_failed: '地址刷新失败：{0}…',
+							msg_check_biometric_failed: '检查生物识别失败',
+							alert_refresh_stopped: '❌ 刷新已停止\n\n已完成 {0}/{1} 个地址的刷新\n成功: {2} | 失败: {3}',
+							alert_refresh_error: '❌ 刷新异常\n\n{0}\n\n已完成: {1}, 失败: {2}',
+							confirm_remove_address: '确定移除该地址？',
+							msg_import_failed: '导入失败：{0}',
+							err_import_format: '格式错误',
+							msg_tx_fetch_failed: '获取交易历史失败',
+							alert_insecure_context: '⚠️ 安全提示\n\n本应用需要在安全环境下运行以保护您的数据。\n\n请使用以下方式访问：\n• HTTPS 网址（推荐）\n• localhost 或 127.0.0.1\n\n当前 URL: {0}',
+							alert_faceid_enabled: '✅ Face ID / Touch ID 已启用！\n下次打开应用时，您可以使用生物识别快速解锁。',
+							alert_faceid_enable_failed: '❌ 启用失败\n\n{0}\n\n详细错误: {1}',
+							alert_faceid_verify_failed: '❌ 验证失败\n\n{0}\n\n请使用密码解锁。\n详细错误: {1}',
+							confirm_disable_faceid: '确定要禁用 Face ID / Touch ID 解锁吗？\n下次需要手动输入密码。',
+							err_crypto_unavailable: '加密功能不可用。请在 HTTPS 或 localhost 环境下使用本应用。',
+							err_password_or_corrupt: '密码错误或数据损坏',
+							err_credential_create: '凭证创建失败',
+							err_biometric_register_cancelled: '用户取消了生物识别注册',
+							err_credential_not_found: '未找到已注册的凭证',
+							err_biometric_verify_failed: '生物识别验证失败',
+							err_biometric_verify_cancelled: '用户取消了生物识别验证',
+							err_encrypted_password_not_found: '未找到加密的密码',
+							err_password_decrypt: '密码解密失败',
+							err_invalid_btcusdt: '无效的 BTCUSDT 价格',
+							err_invalid_usdcny: '无效的 USD/CNY 汇率',
+						},
+						en: {
+							app_title: 'BitWatch',
+							app_subtitle: 'Multiple data sources: mempool, blockstream, blockchain',
+							badge_readonly: 'Read-only',
+							btn_export: 'Export',
+							btn_import: 'Import',
+							btn_balance: 'Balance',
+							btn_fees: 'Fees',
+							btn_stop_refresh: 'Stop',
+							btn_add: 'Add',
+							add_address_title: 'Add watch address',
+							placeholder_address: 'Bitcoin address (starts with 1, 3 or bc1)',
+							placeholder_label: 'Label (optional)',
+							addr_format_hint: 'Address format: 1... / 3... / bc1... (26–62 chars)',
+							addr_format_invalid: 'Invalid address format',
+							addr_exists: 'Address already exists',
+							addr_empty_title: 'No watch addresses yet',
+							addr_empty_hint: 'Enter an address above to start tracking',
+							refresh_hint: 'Refresh',
+							address_word: 'address',
+							tx_detail_title: 'Transaction details',
+							tx_history_title: 'Transaction history',
+							tx_empty: 'No transactions yet',
+							tx_confirmations: 'Confirmations: {0}',
+							tx_received: 'Received',
+							tx_sent: 'Sent',
+							tx_self: 'Self',
+							total_balance: 'Total balance (confirmed only)',
+							last_refresh: 'Last full refresh',
+							last_refresh_never: 'never',
+							watching_count: 'Watching {0} addresses',
+							confirmed: 'Confirmed',
+							unconfirmed: 'Unconfirmed: {0} sats',
+							fee_fastest: 'Fastest',
+							fee_hour: '~1 hour',
+							fee_economy: 'Economy',
+							fee_minimum: 'Minimum',
+							update_available: 'New version available',
+							btn_update: 'Update',
+							unlock_faceid: 'Unlock with Face ID',
+							unlock_password: 'Enter password to unlock',
+							unlock_local_hint: 'Encrypted locally · data stays on this device',
+							placeholder_password: 'Enter local password',
+							btn_use_faceid: 'Use Face ID / Touch ID',
+							unlock_tap_hint: 'Tap to start verification',
+							unlock_verifying: 'Verifying...',
+							unlock_in_progress: 'Unlocking...',
+							unlock_btn: 'Unlock',
+							use_password_instead: 'Unlock with password',
+							disable_biometric: 'Disable Face ID / Touch ID',
+							first_use_hint: 'First use: enter any password to create encrypted storage<br>Remember it — data is encrypted with AES-GCM and stored locally',
+							enable_biometric_title: 'Enable Face ID / Touch ID?',
+							enable_biometric_desc: 'Next time you open the app, you can unlock quickly with biometrics — no password needed.',
+							enable_biometric_security: 'Your password is encrypted with AES-256 and stored locally; only accessible after Face ID verification.',
+							btn_enable_biometric: 'Enable biometrics',
+							enabling_in_progress: 'Setting up...',
+							btn_skip: 'Not now',
+							// --- JS messages ---
+							msg_fee_failed: 'Failed to fetch fees: all data sources unavailable',
+							msg_rate_cache_write_failed: 'Failed to write rate cache',
+							msg_save_failed: 'Failed to save encrypted data',
+							msg_addr_refresh_failed: 'Address refresh failed: {0}…',
+							msg_check_biometric_failed: 'Failed to check biometrics',
+							alert_refresh_stopped: '❌ Refresh stopped\n\nCompleted {0}/{1} addresses\nSuccess: {2} | Failed: {3}',
+							alert_refresh_error: '❌ Refresh error\n\n{0}\n\nCompleted: {1}, failed: {2}',
+							confirm_remove_address: 'Remove this address?',
+							msg_import_failed: 'Import failed: {0}',
+							err_import_format: 'Invalid format',
+							msg_tx_fetch_failed: 'Failed to fetch transaction history',
+							alert_insecure_context: '⚠️ Security notice\n\nThis app must run in a secure context to protect your data.\n\nAccess via:\n• HTTPS URL (recommended)\n• localhost or 127.0.0.1\n\nCurrent URL: {0}',
+							alert_faceid_enabled: '✅ Face ID / Touch ID enabled!\nNext time you open the app, unlock with biometrics.',
+							alert_faceid_enable_failed: '❌ Enable failed\n\n{0}\n\nError: {1}',
+							alert_faceid_verify_failed: '❌ Verification failed\n\n{0}\n\nPlease unlock with password.\nError: {1}',
+							confirm_disable_faceid: 'Disable Face ID / Touch ID unlock?\nYou will need to enter the password next time.',
+							err_crypto_unavailable: 'Crypto unavailable. Use HTTPS or localhost.',
+							err_password_or_corrupt: 'Wrong password or corrupted data',
+							err_credential_create: 'Credential creation failed',
+							err_biometric_register_cancelled: 'User cancelled biometric registration',
+							err_credential_not_found: 'No registered credential found',
+							err_biometric_verify_failed: 'Biometric verification failed',
+							err_biometric_verify_cancelled: 'User cancelled biometric verification',
+							err_encrypted_password_not_found: 'No encrypted password found',
+							err_password_decrypt: 'Password decryption failed',
+							err_invalid_btcusdt: 'Invalid BTCUSDT price',
+							err_invalid_usdcny: 'Invalid USD/CNY rate',
+						},
+					};
+
+					function detectLang() {
+						const saved = localStorage.getItem(LANG_STORAGE_KEY);
+						if (saved && SUPPORTED_LANGS.some(l => l.code === saved)) return saved;
+						const nav = (navigator.language || 'zh').slice(0, 2).toLowerCase();
+						return SUPPORTED_LANGS.some(l => l.code === nav) ? nav : 'zh';
+					}
+
+					const currentLang = ref(detectLang());
+					const langMenuOpen = ref(false);
+
+					function t(key, ...args) {
+						const dict = translations[currentLang.value] || translations.zh;
+						let s = dict[key] ?? translations.zh[key] ?? key;
+						args.forEach((a, i) => { s = s.replace('{' + i + '}', a); });
+						return s;
+					}
+
+					function langLabel(code) {
+						const found = SUPPORTED_LANGS.find(l => l.code === code);
+						return found ? found.label : code;
+					}
+
+					function setLang(code) {
+						currentLang.value = code;
+						localStorage.setItem(LANG_STORAGE_KEY, code);
+						langMenuOpen.value = false;
+						document.documentElement.dir = (code === 'ar') ? 'rtl' : 'ltr';
+						document.documentElement.lang = code;
+					}
+
 					// 计算属性
 					const isAddressInputValid = computed(() => {
 						const addr = newAddressInput.value.trim();
@@ -1600,10 +1815,19 @@
 
 						// 首次打开应用，自动触发 Face ID
 						autoTriggerBiometric();
+						document.documentElement.dir = (currentLang.value === 'ar') ? 'rtl' : 'ltr';
+						document.documentElement.lang = currentLang.value;
 					});
 
 					return {
 						VERSION,
+						// i18n
+						SUPPORTED_LANGS,
+						currentLang,
+						langMenuOpen,
+						t,
+						setLang,
+						langLabel,
 						updateAvailable,
 						applyUpdate,
 						toasts,
