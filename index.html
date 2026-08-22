@@ -38,15 +38,14 @@
 		/* i18n 语言切换下拉菜单 */
 		.lang-switcher { position: relative; display: inline-block; }
 		.lang-trigger {
-			display: inline-flex; align-items: center; gap: 4px;
-			font-size: 12px; font-weight: 500;
-			color: #6b7280; background: #f3f4f6;
-			border: 1px solid #e5e7eb;
-			padding: 2px 8px; border-radius: 9999px;
-			cursor: pointer; transition: background 0.15s, color 0.15s;
+			display: inline-flex; align-items: center; justify-content: center;
+			font-size: 18px; line-height: 1;
+			color: #6b7280; background: transparent;
+			border: 0; padding: 2px 4px; border-radius: 6px;
+			cursor: pointer; transition: background 0.15s;
 			white-space: nowrap;
 		}
-		.lang-trigger:hover { background: #e5e7eb; color: #374151; }
+		.lang-trigger:hover { background: #f3f4f6; }
 		.lang-menu {
 			position: absolute; top: calc(100% + 4px); left: 0;
 			background: white; border: 1px solid #e5e7eb;
@@ -106,13 +105,13 @@
 							{{ t('app_title') }} <span class="text-lg font-normal text-orange-500">{{ VERSION }}</span>
 							<span class="lang-switcher">
 								<button class="lang-trigger" @click="langMenuOpen = !langMenuOpen" type="button">
-									🌐 {{ langLabel(currentLang) }} ▾
+									{{ langFlag(currentLang) }}
 								</button>
 								<div v-if="langMenuOpen" @click.stop>
 									<div class="lang-backdrop" @click="langMenuOpen = false"></div>
 									<div class="lang-menu">
 										<button v-for="lang in SUPPORTED_LANGS" :key="lang.code" type="button" @click="setLang(lang.code)">
-											<span>{{ lang.label }}</span>
+											<span>{{ lang.flag }} {{ lang.label }}</span>
 											<span v-if="lang.code === currentLang" class="lang-check">✓</span>
 										</button>
 									</div>
@@ -292,13 +291,13 @@
 						<span class="text-xs text-gray-400 font-mono mt-4">{{ VERSION }}</span>
 						<span class="lang-switcher">
 							<button class="lang-trigger" @click="langMenuOpen = !langMenuOpen" type="button">
-								🌐 {{ langLabel(currentLang) }} ▾
+								{{ langFlag(currentLang) }}
 							</button>
 							<div v-if="langMenuOpen" @click.stop>
 								<div class="lang-backdrop" @click="langMenuOpen = false"></div>
 								<div class="lang-menu">
 									<button v-for="lang in SUPPORTED_LANGS" :key="lang.code" type="button" @click="setLang(lang.code)">
-										<span>{{ lang.label }}</span>
+										<span>{{ lang.flag }} {{ lang.label }}</span>
 										<span v-if="lang.code === currentLang" class="lang-check">✓</span>
 									</button>
 								</div>
@@ -789,12 +788,12 @@
 
 			// ==================== i18n 国际化 (top-level, shared with setup) ====================
 			const SUPPORTED_LANGS = [
-				{ code: 'zh', label: '简体中文' },
-				{ code: 'en', label: 'English' },
-				{ code: 'fr', label: 'Français' },
-				{ code: 'es', label: 'Español' },
-				{ code: 'ru', label: 'Русский' },
-				{ code: 'ar', label: 'العربية' },
+				{ code: 'zh', label: '简体中文', flag: '🇨🇳' },
+				{ code: 'en', label: 'English', flag: '🇬🇧' },
+				{ code: 'fr', label: 'Français', flag: '🇫🇷' },
+				{ code: 'es', label: 'Español', flag: '🇪🇸' },
+				{ code: 'ru', label: 'Русский', flag: '🇷🇺' },
+				{ code: 'ar', label: 'العربية', flag: '🇸🇦' },
 			];
 			const LANG_STORAGE_KEY = 'bw-lang';
 			const translations = {
@@ -1428,6 +1427,11 @@
 			function langLabel(code) {
 				const found = SUPPORTED_LANGS.find(l => l.code === code);
 				return found ? found.label : code;
+			}
+
+			function langFlag(code) {
+				const found = SUPPORTED_LANGS.find(l => l.code === code);
+				return found ? found.flag : '🌐';
 			}
 
 			function setLang(code) {
@@ -2320,6 +2324,7 @@
 						t,
 						setLang,
 						langLabel,
+						langFlag,
 						updateAvailable,
 						applyUpdate,
 						toasts,
