@@ -10,10 +10,10 @@ BitWatch (比特观察) is a single-file Bitcoin wallet observation tool built a
 
 ## Key Files
 
-- **bitwatch_V4.1.html** - Main application file containing all HTML, CSS, Vue.js logic, and WebAuthn implementation (~1200 lines)
-- **sw.js** - Service Worker for offline caching and PWA support
+- **index.html** - Main application file (the app itself, overwritten each release). Contains all HTML, CSS, Vue.js logic, and WebAuthn implementation (~1600 lines)
+- **sw.js** - Service Worker for offline caching and PWA update detection (prompt mode)
 - **manifest.json** - PWA manifest for iOS/Android home screen installation
-- **index.html** - Simple redirect page to latest version
+- **bitwatch_V*.html** - Historical versioned snapshots (kept for git history; no longer the live app)
 - **libs/** - Self-hosted libraries (Tailwind CSS, Vue.js, Font Awesome)
 
 ## Development Workflow
@@ -24,10 +24,10 @@ BitWatch (比特观察) is a single-file Bitcoin wallet observation tool built a
 python3 -m http.server 8080
 
 # Access on same device
-http://localhost:8080/bitwatch_V4.1.html
+http://localhost:8080/index.html
 
 # Access from mobile device (iPhone)
-http://[YOUR_MAC_IP]:8080/bitwatch_V4.1.html
+http://[YOUR_MAC_IP]:8080/index.html
 ```
 
 ### Deployment
@@ -50,7 +50,7 @@ This ensures the application works indefinitely without external CDN dependencie
 
 ## Code Architecture
 
-### Vue.js Application Structure (inside bitwatch_V3.1.html)
+### Vue.js Application Structure (inside index.html)
 
 The application uses Vue 3 Composition API with the following reactive state:
 
@@ -97,14 +97,19 @@ The application uses Vue 3 Composition API with the following reactive state:
 
 ### Version Management
 
-When publishing new versions:
-1. Create new HTML file with version number (e.g., `bitwatch_V3.2.html`)
-2. Update `manifest.json` start_url to new version
-3. Update `index.html` redirect to new version
-4. Update Service Worker `CACHE_NAME` and `urlsToCache` array
-5. Commit all changes together
+The app uses a **stable `index.html` entry point overwritten each release** (same mechanism as the CalorieCounter PWA: `vite-plugin-pwa`'s `prompt` mode, ported to vanilla JS). The Service Worker byte-diffs `sw.js`; when `CACHE_VERSION` changes, the new SW installs into "waiting", the page shows an "发现新版本 / 更新" banner, and tapping **更新** activates the new SW and reloads into fresh assets. Auto-update works for browser sessions and **Add to Home Screen** installs alike (iOS foreground check via `visibilitychange` + hourly interval).
 
-**Never overwrite existing versioned files** - preserves git history and allows easy rollback.
+When publishing new versions:
+1. Edit **`index.html`** (the app itself) — bump the `VERSION` constant near the top of `setup()`
+2. Edit **`sw.js`** — bump `CACHE_VERSION` to the same value (this changes `sw.js` bytes, which drives update detection)
+3. Commit both changes together and `git push origin main`
+4. GitHub Pages deploys; users see the update banner on next foreground/refresh
+
+**Never create new versioned HTML files** (e.g. `bitwatch_V6.1.html`) — the whole update mechanism depends on a single stable entry point. Old `bitwatch_V*.html` files are kept for git history/rollback but are no longer the live app.
+
+**Note:** Home-screen installs pinned to an old `bitwatch_V*.html` under the legacy no-update SW are stuck on that version — the old SW has no update flow to deliver the new one. Those users need a one-time manual re-add of the app (now pointing at `index.html`) to start receiving auto-updates. New installs get auto-updates from here on.
+
+**Bumping the Service Worker cache key** (why `CACHE_VERSION` matters): it is the byte-level change the browser detects when re-fetching `sw.js`. Think of it as the equivalent of Workbox's content-hash revisions — you bump it every release so the update flow triggers.
 
 ## Security Considerations
 
