@@ -92,7 +92,7 @@
 							<i class="fa-solid" :class="isRefreshingAll ? 'fa-stop' : 'fa-rotate'"></i>
 							<span>{{ isRefreshingAll ? t('btn_stop_refresh') : t('btn_balance') }}</span>
 						</button>
-						<button v-if="feeLoadFailed || isFeeLoading" @click="refreshFees" class="text-white px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm active:scale-95 select-none cursor-pointer" :class="isFeeLoading ? 'bg-red-500 hover:bg-red-600 active:bg-red-700' : 'bg-amber-500 hover:bg-amber-600 active:bg-amber-700'" style="touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-user-select: none;" :title="isFeeLoading ? '点击停止' : '费率加载失败，点击重试'">
+						<button v-if="feeLoadFailed || isFeeLoading" @click="refreshFees" class="text-white px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm active:scale-95 select-none cursor-pointer" :class="isFeeLoading ? 'bg-red-500 hover:bg-red-600 active:bg-red-700' : 'bg-amber-500 hover:bg-amber-600 active:bg-amber-700'" style="touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-user-select: none;" :title="isFeeLoading ? t('fees_btn_stop_hint') : t('fees_btn_retry_hint')">
 							<i class="fa-solid" :class="isFeeLoading ? 'fa-stop' : 'fa-rotate'"></i>
 							<span>{{ isFeeLoading ? t('btn_stop_refresh') : t('btn_fees') }}</span>
 						</button>
@@ -849,6 +849,8 @@
 							fee_minimum: '最低',
 							update_available: '发现新版本',
 							btn_update: '更新',
+							fees_btn_stop_hint: '点击停止',
+							fees_btn_retry_hint: '费率加载失败，点击重试',
 							unlock_faceid: 'Face ID 解锁',
 							unlock_password: '输入密码解锁',
 							unlock_local_hint: '本地加密 · 数据仅存于此设备',
@@ -935,6 +937,8 @@
 							fee_minimum: 'Minimum',
 							update_available: 'New version available',
 							btn_update: 'Update',
+							fees_btn_stop_hint: 'Click to stop',
+							fees_btn_retry_hint: 'Fee load failed, click to retry',
 							unlock_faceid: 'Unlock with Face ID',
 							unlock_password: 'Enter password to unlock',
 							unlock_local_hint: 'Encrypted locally · data stays on this device',
