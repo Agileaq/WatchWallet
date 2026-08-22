@@ -481,7 +481,7 @@
 					if (parsed && parsed.rate > 0) return parsed;
 				} catch (e) {
 					console.warn('读取汇率缓存失败', e);
-					emitToast('读取汇率缓存失败');
+					emitToast(t('msg_rate_cache_read_failed'));
 				}
 				return null;
 			}
@@ -826,6 +826,13 @@
 					err_password_decrypt: '密码解密失败',
 					err_invalid_btcusdt: '无效的 BTCUSDT 价格',
 					err_invalid_usdcny: '无效的 USD/CNY 汇率',
+					msg_rate_cache_read_failed: '读取汇率缓存失败',
+					err_all_sources_failed: '所有数据源均失败: {0}',
+					msg_rate_refresh_failed_using_cache: '汇率刷新失败，正在沿用缓存汇率',
+					msg_rate_fetch_failed_all_sources: '汇率获取失败：所有数据源均不可用',
+					alert_refresh_complete_with_addrs: '✅ 刷新完成\n\n总计: {0} 个地址\n成功: {1} | 失败: {2}\n\n失败地址:\n{3}\n\n',
+					alert_refresh_complete_many_addrs: '✅ 刷新完成\n\n总计: {0} 个地址\n成功: {1} | 失败: {2}\n\n失败地址过多 ({3}个)，请查看控制台\n\n',
+					alert_refresh_failed_addrs_hint: '失败的地址数据未更新，可稍后单独刷新。',
 				},
 				en: {
 					app_title: 'BitWatch',
@@ -914,6 +921,13 @@
 					err_password_decrypt: 'Password decryption failed',
 					err_invalid_btcusdt: 'Invalid BTCUSDT price',
 					err_invalid_usdcny: 'Invalid USD/CNY rate',
+					msg_rate_cache_read_failed: 'Failed to read rate cache',
+					err_all_sources_failed: 'All data sources failed: {0}',
+					msg_rate_refresh_failed_using_cache: 'Rate refresh failed, using cached rate',
+					msg_rate_fetch_failed_all_sources: 'Rate fetch failed: all data sources unavailable',
+					alert_refresh_complete_with_addrs: '✅ Refresh complete\n\nTotal: {0} addresses\nSuccess: {1} | Failed: {2}\n\nFailed addresses:\n{3}\n\n',
+					alert_refresh_complete_many_addrs: '✅ Refresh complete\n\nTotal: {0} addresses\nSuccess: {1} | Failed: {2}\n\nToo many failed addresses ({3}), check the console\n\n',
+					alert_refresh_failed_addrs_hint: 'Failed addresses were not updated; you can refresh them individually later.',
 				},
 			};
 
@@ -1121,7 +1135,7 @@
 								console.warn(`[${address.slice(0,8)}...] ✗ ${source.name} 失败:`, e.message);
 								// 如果不是最后一个源，继续尝试下一个
 								if (i === sources.length - 1) {
-									throw new Error(`所有数据源均失败: ${e.message}`);
+									throw new Error(t('err_all_sources_failed', e.message));
 								}
 								// 等待一小段时间再尝试下一个源
 								await new Promise(r => setTimeout(r, 500));
@@ -1315,8 +1329,8 @@
 						// 拉取失败：保留缓存汇率，¥≈ 值继续以旧汇率显示
 						console.warn('汇率刷新失败，沿用缓存汇率:', btcToCnyRate.value);
 						showToast(btcToCnyRate.value
-							? '汇率刷新失败，正在沿用缓存汇率'
-							: '汇率获取失败：所有数据源均不可用');
+							? t('msg_rate_refresh_failed_using_cache')
+							: t('msg_rate_fetch_failed_all_sources'));
 						return btcToCnyRate.value;
 					}
 
@@ -1478,13 +1492,10 @@
 								// 如果有失败的地址，提示用户
 								if (failedCount > 0) {
 									alert(
-										`✅ 刷新完成\n\n` +
-										`总计: ${addressList.value.length} 个地址\n` +
-										`成功: ${successCount} | 失败: ${failedCount}\n\n` +
 										(failedAddresses.length <= 5
-											? `失败地址:\n${failedAddresses.join('\n')}\n\n`
-											: `失败地址过多 (${failedCount}个)，请查看控制台\n\n`) +
-										`失败的地址数据未更新，可稍后单独刷新。`
+											? t('alert_refresh_complete_with_addrs', addressList.value.length, successCount, failedCount, failedAddresses.join('\n'))
+											: t('alert_refresh_complete_many_addrs', addressList.value.length, successCount, failedCount, failedCount)) +
+										t('alert_refresh_failed_addrs_hint')
 									);
 								}
 							}
