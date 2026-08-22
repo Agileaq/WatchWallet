@@ -7,7 +7,7 @@
 //
 // 每次发布：编辑 index.html，把下方 CACHE_VERSION 与 index.html 内的 VERSION 一起改，再 push。
 
-const CACHE_VERSION = 'V6.2';
+const CACHE_VERSION = 'V6.3';
 const CACHE_NAME = `bitwatch-${CACHE_VERSION}`;
 const APP_SHELL = [
   './index.html',
