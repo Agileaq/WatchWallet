@@ -97,19 +97,59 @@ The application uses Vue 3 Composition API with the following reactive state:
 
 ### Version Management
 
-The app uses a **stable `index.html` entry point overwritten each release** (same mechanism as the CalorieCounter PWA: `vite-plugin-pwa`'s `prompt` mode, ported to vanilla JS). The Service Worker byte-diffs `sw.js`; when `CACHE_VERSION` changes, the new SW installs into "waiting", the page shows an "发现新版本 / 更新" banner, and tapping **更新** activates the new SW and reloads into fresh assets. Auto-update works for browser sessions and **Add to Home Screen** installs alike (iOS foreground check via `visibilitychange` + hourly interval).
+The app uses a **stable `index.html` entry point overwritten each release** (same mechanism as the CalorieCounter PWA: `vite-plugin-pwa`'s `prompt` mode, ported to vanilla JS). The Service Worker byte-diffs `sw.js`; when `sw.js` bytes change, the new SW installs into "waiting", the page shows an "发现新版本 / 更新" banner, and tapping **更新** activates the new SW and reloads into fresh assets. Auto-update works for browser sessions and **Add to Home Screen** installs alike (iOS foreground check via `visibilitychange` + hourly interval).
 
-When publishing new versions:
-1. Edit **`index.html`** (the app itself) — bump the `VERSION` constant near the top of `setup()`
-2. Edit **`sw.js`** — bump `CACHE_VERSION` to the same value (this changes `sw.js` bytes, which drives update detection)
-3. Commit both changes together and `git push origin main`
-4. GitHub Pages deploys; users see the update banner on next foreground/refresh
+#### Auto-commit-hash SW updates (no manual version bump needed)
+
+`sw.js` carries a `BUILD_HASH` constant that participates in `CACHE_NAME`. A **`post-commit` git hook** (`.git/hooks/post-commit`, not tracked by git) automatically rewrites `BUILD_HASH` to the current commit's short hash after every commit, then `git commit --amend --no-edit` folds the change into that same commit. Result: **every commit changes `sw.js` bytes → the SW update banner always fires on the next visit**, with no need to bump any version number.
+
+- `BUILD_HISTORICAL_VERSION` (`sw.js`) — semantic version, matches `VERSION` in `index.html`. Bump only for a real release label; it does NOT drive update detection.
+- `BUILD_HASH` (`sw.js`) — injected by the hook; drives the byte change that triggers SW update.
+- `VERSION` (`index.html`) — display only (shown next to the app title). Does NOT participate in update detection.
+
+**When publishing changes:**
+1. Edit the code (`index.html` / `sw.js` / etc.) — bump `BUILD_HISTORICAL_VERSION` + `VERSION` only if you want a new visible version label; otherwise leave them.
+2. `git commit` — the post-commit hook auto-injects the commit hash into `sw.js` `BUILD_HASH` and amends. (If the hook is missing on a machine, see "Reinstalling the hook" below.)
+3. `git push origin main` — GitHub Pages deploys; users see the update banner on next foreground/refresh.
+
+**Self-reference caveat:** `git commit --amend` produces a *new* hash, so the value written into `BUILD_HASH` is the pre-amend HEAD short hash, not exactly the final commit's hash. This is fine — `BUILD_HASH` only needs to differ every commit to drive SW byte-change detection; it does not need to equal its own commit.
+
+#### Reinstalling the hook (`.git/hooks/post-commit`)
+
+The hook is not tracked by git. On a fresh clone, recreate it:
+
+```bash
+cat > .git/hooks/post-commit <<'HOOK'
+#!/usr/bin/env bash
+set -euo pipefail
+# Re-entrancy guard: the hook itself runs `git commit --amend`, which would
+# re-trigger post-commit recursively. Skip when already inside this hook.
+[ -n "${BITWATCH_HOOK:-}" ] && exit 0
+export BITWATCH_HOOK=1
+cd "$(git rev-parse --show-toplevel)"
+SW="sw.js"
+[ -f "$SW" ] || exit 0
+HEAD_HASH=$(git rev-parse --short HEAD)
+python3 - "$SW" "$HEAD_HASH" <<'PY'
+import re, sys
+path, h = sys.argv[1], sys.argv[2]
+s = open(path).read()
+new, n = re.subn(r"^(const BUILD_HASH = ')[^']*(';.*)$", r"\g<1>" + h + r"\g<2>", s, count=1, flags=re.M)
+if n == 0 or new == s:
+    sys.exit(0)
+open(path, 'w').write(new)
+PY
+if ! git diff --quiet -- "$SW"; then
+    git add "$SW"
+    git commit --amend --no-edit --no-verify >/dev/null 2>&1 || true
+fi
+HOOK
+chmod +x .git/hooks/post-commit
+```
 
 **Never create new versioned HTML files** (e.g. `bitwatch_V6.1.html`) — the whole update mechanism depends on a single stable entry point. Old `bitwatch_V*.html` files are kept for git history/rollback but are no longer the live app.
 
 **Note:** Home-screen installs pinned to an old `bitwatch_V*.html` under the legacy no-update SW are stuck on that version — the old SW has no update flow to deliver the new one. Those users need a one-time manual re-add of the app (now pointing at `index.html`) to start receiving auto-updates. New installs get auto-updates from here on.
-
-**Bumping the Service Worker cache key** (why `CACHE_VERSION` matters): it is the byte-level change the browser detects when re-fetching `sw.js`. Think of it as the equivalent of Workbox's content-hash revisions — you bump it every release so the update flow triggers.
 
 ## Security Considerations
 

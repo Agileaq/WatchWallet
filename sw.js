@@ -1,13 +1,19 @@
 // Service Worker for BitWatch
 // 更新机制（参考 CalorieCounter / vite-plugin-pwa 的 prompt 模式）：
-// - CACHE_VERSION 改动 → sw.js 字节变化 → 浏览器检测到新 SW → 安装进入 waiting
+// - sw.js 字节变化 → 浏览器检测到新 SW → 安装进入 waiting
 // - 页面 updatefound 监听到 waiting → 显示"发现新版本"横幅
 // - 用户点"更新" → postMessage({type:'SKIP_WAITING'}) → self.skipWaiting()
 // - controllerchange → 页面自动刷新，加载新版本
 //
-// 每次发布：编辑 index.html，把下方 CACHE_VERSION 与 index.html 内的 VERSION 一起改，再 push。
+// 触发字节变化的方式：BUILD_HASH 由 .git/hooks/post-commit 自动写入每次 commit 的 hash。
+// 每次 git commit → hook 把 sw.js 的 BUILD_HASH 更新为当前 commit hash → sw.js 字节变 → 横幅必弹。
+// 无需手动 bump 任何版本号。VERSION (index.html) 仅作展示，不参与更新检测。
 
-const CACHE_VERSION = 'V6.3';
+// BUILD_HISTORICAL_VERSION：语义版本号，仅用于缓存命名区分（大版本时手动改）。
+// BUILD_HASH：每次 commit 由 post-commit hook 注入，驱动 SW 字节变化。
+const BUILD_HISTORICAL_VERSION = 'V6.3';
+const BUILD_HASH = 'c23c9c7'; // 会被 post-commit hook 自动覆盖
+const CACHE_VERSION = `${BUILD_HISTORICAL_VERSION}-${BUILD_HASH}`;
 const CACHE_NAME = `bitwatch-${CACHE_VERSION}`;
 const APP_SHELL = [
   './index.html',
