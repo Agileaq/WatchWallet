@@ -1,6 +1,6 @@
 {
-  "name": "比特观察 - 加密钱包",
-  "short_name": "比特观察",
+  "name": "BitWatch",
+  "short_name": "BitWatch",
   "description": "比特币钱包地址观察工具，实时追踪链上资产",
   "start_url": "./index.html",
   "display": "standalone",

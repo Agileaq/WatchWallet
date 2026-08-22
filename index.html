@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>比特观察 · 加密钱包</title>
+		<title>BitWatch · 加密钱包</title>
 
 		<!-- PWA配置 -->
 		<link rel="manifest" href="manifest.json">
@@ -12,7 +12,7 @@
 		<!-- iOS特定配置 -->
 		<meta name="apple-mobile-web-app-capable" content="yes">
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-		<meta name="apple-mobile-web-app-title" content="比特观察">
+		<meta name="apple-mobile-web-app-title" content="BitWatch">
 		<link rel="apple-touch-icon" href="icon-192.png">
 		<!-- 使用本地资源，提供稳定服务 -->
 		<script src="libs/js/tailwind.min.js"></script>
@@ -538,7 +538,7 @@
 						publicKey: {
 							challenge: challenge,
 							rp: {
-								name: "比特观察"
+								name: "BitWatch"
 							},
 							user: {
 								id: userIdBytes,
@@ -728,7 +728,7 @@
 			const app = createApp({
 				setup() {
 					// 版本号
-					const VERSION = 'V6.0';
+					const VERSION = 'V6.1';
 
 					// 更新提示：由 SW updatefound 流程触发 _updateSW → 置 true
 					const updateAvailable = ref(false);
