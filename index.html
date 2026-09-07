@@ -1927,45 +1927,56 @@
 						const failedAddresses = [];
 
 						try {
-							console.log(`开始刷新 ${addressList.value.length} 个地址...`);
-							for (let i = 0; i < addressList.value.length; i++) {
-								// 检查是否取消
-								if (shouldCancelRefresh.value) {
-									console.log(`刷新已取消，已完成 ${i}/${addressList.value.length} 个地址`);
-									// 只有用户手动取消才弹alert，静默取消（切后台）不弹
-									if (!silentCancelRefresh.value) {
-										alert(t('alert_refresh_stopped', i, addressList.value.length, successCount, failedCount));
-									}
-									break;
-								}
+							// 并发刷新：worker pool，最多同时刷 REFRESH_CONCURRENCY 个地址
+							const REFRESH_CONCURRENCY = 5;
+							const total = addressList.value.length;
+							let cursor = 0; // 下一个待刷新地址的索引
+							let processedCount = 0;
+							let cancelled = false;
 
-								const item = addressList.value[i];
-								const oldLastChecked = item.lastChecked || 0;
+							console.log(`开始刷新 ${total} 个地址（并发上限 ${REFRESH_CONCURRENCY}）...`);
 
-								try {
-									await refreshSingleAddress(item.address, true);
-									// 检查是否成功更新（lastChecked更新）
-									const updatedItem = addressList.value.find(a => a.address === item.address);
-									if (updatedItem && updatedItem.lastChecked > oldLastChecked) {
-										successCount++;
-										console.log(`✓ [${i+1}/${addressList.value.length}] ${item.address.slice(0,8)}... 成功`);
-									} else {
+							const worker = async () => {
+								while (!shouldCancelRefresh.value) {
+									const i = cursor++;
+									if (i >= total) return;
+									const item = addressList.value[i];
+									const oldLastChecked = item.lastChecked || 0;
+
+									try {
+										await refreshSingleAddress(item.address, true);
+										// 检查是否成功更新（lastChecked更新）
+										const updatedItem = addressList.value.find(a => a.address === item.address);
+										if (updatedItem && updatedItem.lastChecked > oldLastChecked) {
+											successCount++;
+											console.log(`✓ [${i+1}/${total}] ${item.address.slice(0,8)}... 成功`);
+										} else {
+											failedCount++;
+											failedAddresses.push(item.address.slice(0,12));
+											console.warn(`✗ [${i+1}/${total}] ${item.address.slice(0,8)}... 失败`);
+										}
+									} catch (e) {
 										failedCount++;
 										failedAddresses.push(item.address.slice(0,12));
-										console.warn(`✗ [${i+1}/${addressList.value.length}] ${item.address.slice(0,8)}... 失败`);
+										console.error(`✗ [${i+1}/${total}] ${item.address.slice(0,8)}... 异常:`, e.message);
 									}
-								} catch (e) {
-									failedCount++;
-									failedAddresses.push(item.address.slice(0,12));
-									console.error(`✗ [${i+1}/${addressList.value.length}] ${item.address.slice(0,8)}... 异常:`, e.message);
-								}
+									processedCount++;
 
-								// 增加延迟到1秒，避免触发API的速率限制
-								await new Promise(r => setTimeout(r, 1000));
-							}
+									// 每个 worker 间隔 200ms：并发 5 时整体约 5 次/秒，兼顾速度与限流
+									await new Promise(r => setTimeout(r, 200));
+								}
+								cancelled = true;
+							};
+
+							await Promise.all(
+								Array.from({ length: Math.min(REFRESH_CONCURRENCY, total) }, () => worker())
+							);
+
+							// 并发期间各自保存过，最后统一再保存一次，确保最终状态落盘
+							await saveEncryptedAddresses();
 
 							// 只有完整完成才更新时间戳
-							if (!shouldCancelRefresh.value) {
+							if (!cancelled) {
 								lastRefreshTime.value = new Date().toLocaleString();
 								lastRefreshTimestamp.value = Date.now();
 								localStorage.setItem('lastRefreshTimestamp', String(lastRefreshTimestamp.value));
@@ -1979,6 +1990,12 @@
 											: t('alert_refresh_complete_many_addrs', addressList.value.length, successCount, failedCount, failedCount)) +
 										t('alert_refresh_failed_addrs_hint')
 									);
+								}
+							} else {
+								console.log(`刷新已取消，已完成 ${processedCount}/${total} 个地址`);
+								// 只有用户手动取消才弹alert，静默取消（切后台）不弹
+								if (!silentCancelRefresh.value) {
+									alert(t('alert_refresh_stopped', processedCount, total, successCount, failedCount));
 								}
 							}
 						} catch (e) {
