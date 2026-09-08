@@ -150,8 +150,9 @@
 							<span class="text-sm text-orange-600 font-medium">{{ t('total_balance') }}</span>
 							<div class="text-4xl font-bold text-gray-800 mt-1">{{ totalBalance.toLocaleString() }} <span class="text-base font-normal text-gray-500">sats</span></div>
 							<div class="text-sm text-gray-500 mt-1">
-								<i class="fa-regular fa-circle-dot"></i> ≈ {{ (totalBalance / 100000000).toFixed(8) }} BTC
-								<span v-if="btcToCnyRate"> ≈ ¥{{ ((totalBalance / 100000000) * btcToCnyRate).toLocaleString('zh-CN', {maximumFractionDigits: 2}) }}</span>
+								<i class="fa-regular fa-circle-dot"></i> ≈ {{ (totalBalance / 100000000).toFixed(4) }} BTC
+								<span v-if="btcToCnyRate"> ≈ ¥{{ formatFiatValue((totalBalance / 100000000) * btcToCnyRate) }}</span>
+								<span v-if="btcToUsdRate"> ≈ ${{ formatFiatValue((totalBalance / 100000000) * btcToUsdRate) }}</span>
 							</div>
 						</div>
 						<div class="text-right text-sm text-gray-500">
@@ -530,6 +531,7 @@
 			const WEBAUTHN_STORAGE_KEY = 'btc_observe_webauthn_config';
 			const ENCRYPTED_PASSWORD_KEY = 'btc_observe_encrypted_password';
 			const BTC_CNY_RATE_CACHE_KEY = 'btc_observe_cny_rate_cache';
+			const BTC_USD_RATE_CACHE_KEY = 'btc_observe_usd_rate_cache';
 
 			// 同步读取缓存的 BTC→CNY 汇率（应用启动即可用，无需等待网络）
 			function loadCachedBtcToCnyRate() {
@@ -543,6 +545,43 @@
 					emitToast(t('msg_rate_cache_read_failed'));
 				}
 				return null;
+			}
+
+			// 同步读取缓存的 BTC→USD 汇率（应用启动即可用，无需等待网络）
+			function loadCachedBtcToUsdRate() {
+				try {
+					const raw = localStorage.getItem(BTC_USD_RATE_CACHE_KEY);
+					if (!raw) return null;
+					const parsed = JSON.parse(raw);
+					if (parsed && parsed.rate > 0) return parsed;
+				} catch (e) {
+					console.warn('读取USD汇率缓存失败', e);
+					emitToast(t('msg_rate_cache_read_failed'));
+				}
+				return null;
+			}
+
+			// 法币金额格式化：<1000 完整展开（整数）；≥1000 用 k/m/b 缩写，保留3位有效数字
+			// 例：945 → "945"；1234 → "1.23k"；45600 → "45.6k"；1234567 → "1.23m"；2345678901 → "2.35b"
+			function formatFiatValue(value) {
+				if (!(value > 0)) return '0';
+				if (value < 1000) {
+					const rounded = Math.round(value);
+					return rounded > 0 ? rounded.toLocaleString('en-US') : '<1';
+				}
+				const units = [
+					{ limit: 1e9, suffix: 'b' },
+					{ limit: 1e6, suffix: 'm' },
+					{ limit: 1e3, suffix: 'k' }
+				];
+				for (const { limit, suffix } of units) {
+					if (value >= limit) {
+						const v = value / limit;
+						const decimals = v >= 100 ? 0 : v >= 10 ? 1 : 2;
+						return v.toFixed(decimals) + suffix;
+					}
+				}
+				return value.toLocaleString('en-US');
 			}
 
 			// ==================== WebAuthn 生物识别功能 ====================
@@ -1482,10 +1521,13 @@
 					const detailAddress = ref(null);
 					const transactions = ref([]);
 					const loadingTx = ref(false);
-					// 汇率：启动即从本地缓存读取，保证 ¥≈ 值第一时间可显示
+					// 汇率：启动即从本地缓存读取，保证 ¥/$ ≈ 值第一时间可显示
 					const cachedRate = loadCachedBtcToCnyRate();
 					const btcToCnyRate = ref(cachedRate ? cachedRate.rate : null);
 					const btcToCnyRateTime = ref(cachedRate ? cachedRate.updatedAt : null);
+					const cachedUsdRate = loadCachedBtcToUsdRate();
+					const btcToUsdRate = ref(cachedUsdRate ? cachedUsdRate.rate : null);
+					const btcToUsdRateTime = ref(cachedUsdRate ? cachedUsdRate.updatedAt : null);
 
 					// 浮窗告警：可关闭，5秒后自动消失
 					const toasts = ref([]);
@@ -1816,6 +1858,94 @@
 						return btcToCnyRate.value;
 					}
 
+					async function fetchBtcToUsdRate() {
+						// 多个API源，依次尝试
+						const sources = [
+							{
+								name: 'Binance',
+								fetch: async (signal) => {
+									const res = await fetch('https://data-api.binance.vision/api/v3/ticker/price?symbol=BTCUSDT', { signal });
+									if (!res.ok) throw new Error(`Binance HTTP ${res.status}`);
+									const usd = parseFloat((await res.json()).price);
+									if (!(usd > 0)) throw new Error('Invalid BTCUSDT price');
+									return usd;
+								}
+							},
+							{
+								name: 'Blockchain.info',
+								url: 'https://blockchain.info/ticker',
+								parse: (data) => data.USD?.last
+							},
+							{
+								name: 'Coinbase',
+								url: 'https://api.coinbase.com/v2/exchange-rates?currency=BTC',
+								parse: (data) => parseFloat(data.data?.rates?.USD)
+							},
+							{
+								name: 'CoinGecko',
+								url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
+								parse: (data) => data.bitcoin?.usd
+							}
+						];
+
+						for (const source of sources) {
+							let timeoutId;
+							try {
+								console.log(`尝试获取USD汇率: ${source.name}`);
+								const controller = new AbortController();
+								// 自定义抓取（多请求组合）给更宽松的超时预算
+								timeoutId = setTimeout(() => controller.abort(), source.fetch ? 2000 : 1000);
+
+								let rate;
+								if (source.fetch) {
+									rate = await source.fetch(controller.signal);
+								} else {
+									const res = await fetch(source.url, { signal: controller.signal });
+									if (!res.ok) { clearTimeout(timeoutId); continue; }
+									const data = await res.json();
+									rate = source.parse(data);
+								}
+								clearTimeout(timeoutId);
+
+								if (rate && rate > 0) {
+									console.log(`USD汇率获取成功 (${source.name}): ${rate} USD/BTC`);
+									return rate;
+								}
+							} catch (e) {
+								if (timeoutId) clearTimeout(timeoutId);
+								console.warn(`${source.name} 获取USD汇率失败:`, e.message);
+							}
+						}
+
+						console.error('所有USD汇率API均失败');
+						return null;
+					}
+
+					// 拉取最新USD汇率并写入缓存；失败时保留已有（缓存）汇率不变
+					async function refreshBtcToUsdRate() {
+						const rate = await fetchBtcToUsdRate();
+						if (rate && rate > 0) {
+							btcToUsdRate.value = rate;
+							btcToUsdRateTime.value = Date.now();
+							try {
+								localStorage.setItem(BTC_USD_RATE_CACHE_KEY, JSON.stringify({
+									rate: rate,
+									updatedAt: btcToUsdRateTime.value
+								}));
+							} catch (e) {
+								console.warn('写入USD汇率缓存失败', e);
+								showToast(t('msg_rate_cache_write_failed'));
+							}
+							return rate;
+						}
+						// 拉取失败：保留缓存汇率，$≈ 值继续以旧汇率显示
+						console.warn('USD汇率刷新失败，沿用缓存汇率:', btcToUsdRate.value);
+						showToast(btcToUsdRate.value
+							? t('msg_rate_refresh_failed_using_cache')
+							: t('msg_rate_fetch_failed_all_sources'));
+						return btcToUsdRate.value;
+					}
+
 					// 保存加密数据 - 修改为直接接收密码参数
 					async function saveEncryptedAddressesWithPassword(password, list) {
 						if (!password) return;
@@ -2121,7 +2251,7 @@
 								} else {
 									feeLoadFailed.value = true;
 								}
-								await refreshBtcToCnyRate();
+								await Promise.all([refreshBtcToCnyRate(), refreshBtcToUsdRate()]);
 							} catch (e) {
 								console.warn('费率获取失败', e);
 								feeLoadFailed.value = true;
@@ -2272,8 +2402,9 @@
 
 					// 初始化加载费率
 					onMounted(async () => {
-						// 启动即在后台刷新 BTC→CNY 汇率并缓存（不阻塞界面，缓存值已同步显示）
-						refreshBtcToCnyRate().catch(e => console.warn('启动汇率刷新失败', e));
+						// 启动即在后台刷新 BTC→CNY / BTC→USD 汇率并缓存（不阻塞界面，缓存值已同步显示）
+						refreshBtcToCnyRate().catch(e => console.warn('启动CNY汇率刷新失败', e));
+						refreshBtcToUsdRate().catch(e => console.warn('启动USD汇率刷新失败', e));
 
 						isFeeLoading.value = true;
 						try {
@@ -2362,6 +2493,8 @@
 						feeLoadFailed,
 						refreshFees,
 						btcToCnyRate,
+						btcToUsdRate,
+						formatFiatValue,
 						isRefreshingAll,
 						refreshingSet,
 						lastRefreshTime,
