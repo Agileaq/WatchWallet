@@ -532,6 +532,23 @@
 			const ENCRYPTED_PASSWORD_KEY = 'btc_observe_encrypted_password';
 			const BTC_CNY_RATE_CACHE_KEY = 'btc_observe_cny_rate_cache';
 			const BTC_USD_RATE_CACHE_KEY = 'btc_observe_usd_rate_cache';
+			// exchangeratesapi.io 免费版 access_key（前端单文件应用，key 随页面公开，仅限免费额度使用）
+			const EXCHANGE_RATES_API_KEY = 'f22386eed14dc2104df9e4436f18e90f';
+
+			// exchangeratesapi.io /latest：免费版强制 EUR 为基准货币（不支持自定义 base）
+			// 一次请求同时拿到 CNY/USD/BTC 对 EUR 的汇率，供交叉盘换算：
+			//   CNY→BTC = rates.BTC / rates.CNY；反过来 1 BTC 兑 CNY = rates.CNY / rates.BTC
+			//   USD→BTC = rates.BTC / rates.USD；反过来 1 BTC 兑 USD = rates.USD / rates.BTC
+			async function fetchExchangeRatesApiLatest(signal) {
+				const url = `https://api.exchangeratesapi.io/v1/latest?access_key=${EXCHANGE_RATES_API_KEY}&symbols=CNY,USD,BTC`;
+				const res = await fetch(url, { signal });
+				if (!res.ok) throw new Error(`ExchangeRatesAPI HTTP ${res.status}`);
+				const data = await res.json();
+				if (!data.success) throw new Error(data.error?.info || 'success=false');
+				const rates = data.rates || {};
+				if (!((rates.CNY > 0) && (rates.USD > 0) && (rates.BTC > 0))) throw new Error('rates incomplete');
+				return rates;
+			}
 
 			// 同步读取缓存的 BTC→CNY 汇率（应用启动即可用，无需等待网络）
 			function loadCachedBtcToCnyRate() {
@@ -1773,14 +1790,22 @@
 									const usdToCny = (await fxRes.json()).rates?.CNY;
 									if (!(usdToCny > 0)) throw new Error(t('err_invalid_usdcny'));
 
-									return btcUsdt * usdToCny;
-								}
-							},
-							{
-								name: 'Blockchain.info',
-								url: 'https://blockchain.info/ticker',
-								parse: (data) => data.CNY?.last
-							},
+								return btcUsdt * usdToCny;
+							}
+						},
+						{
+							// exchangeratesapi.io（EUR基准交叉盘）：1 BTC 兑 CNY = rates.CNY / rates.BTC（国内直连可达性较好）
+							name: 'ExchangeRatesAPI',
+							fetch: async (signal) => {
+								const rates = await fetchExchangeRatesApiLatest(signal);
+								return rates.CNY / rates.BTC;
+							}
+						},
+						{
+							name: 'Blockchain.info',
+							url: 'https://blockchain.info/ticker',
+							parse: (data) => data.CNY?.last
+						},
 							{
 								name: 'CoinGecko',
 								url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=cny',
@@ -1869,6 +1894,14 @@
 									const usd = parseFloat((await res.json()).price);
 									if (!(usd > 0)) throw new Error('Invalid BTCUSDT price');
 									return usd;
+								}
+							},
+							{
+								// exchangeratesapi.io（EUR基准交叉盘）：1 BTC 兑 USD = rates.USD / rates.BTC（国内直连可达性较好）
+								name: 'ExchangeRatesAPI',
+								fetch: async (signal) => {
+									const rates = await fetchExchangeRatesApiLatest(signal);
+									return rates.USD / rates.BTC;
 								}
 							},
 							{
