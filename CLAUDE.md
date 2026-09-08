@@ -84,8 +84,8 @@ The application uses Vue 3 Composition API with the following reactive state:
 
 **API Integration (Multi-source fallback):**
 - `fetchFeeEstimates()` - Tries 3 fee rate sources: mempool.space → blockstream.info → blockchain.com
-- `fetchBtcToCnyRate()` - Tries 6 exchange rate sources: MixBnEx (Binance BTCUSDT × exchangerate-api USD→CNY) → exchangeratesapi.io (EUR cross rate) → blockchain.info → coingecko → cryptocompare → coinbase
-- `fetchBtcToUsdRate()` - Tries 5 exchange rate sources: binance → exchangeratesapi.io (EUR cross rate) → blockchain.info → coinbase → coingecko
+- `fetchBtcToCnyRate()` - Tries 6 exchange rate sources: MixBnEx (Binance BTCUSDT × exchangerate-api USD→CNY) → blockchain.info → coingecko → cryptocompare → coinbase → exchangeratesapi.io (EUR cross rate, last to conserve free-tier quota)
+- `fetchBtcToUsdRate()` - Tries 5 exchange rate sources: binance → blockchain.info → coinbase → coingecko → exchangeratesapi.io (EUR cross rate, last to conserve free-tier quota)
 - `fetchExchangeRatesApiLatest()` - Shared helper for exchangeratesapi.io `/v1/latest` (free tier forces EUR base; cross rates via `rates.X / rates.Y`)
 - `fetchAddressBalance()` - Gets confirmed/unconfirmed balance and UTXO count
 - `fetchAddressTransactions()` - Retrieves transaction history for address

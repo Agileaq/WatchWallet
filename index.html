@@ -1794,14 +1794,6 @@
 							}
 						},
 						{
-							// exchangeratesapi.io（EUR基准交叉盘）：1 BTC 兑 CNY = rates.CNY / rates.BTC（国内直连可达性较好）
-							name: 'ExchangeRatesAPI',
-							fetch: async (signal) => {
-								const rates = await fetchExchangeRatesApiLatest(signal);
-								return rates.CNY / rates.BTC;
-							}
-						},
-						{
 							name: 'Blockchain.info',
 							url: 'https://blockchain.info/ticker',
 							parse: (data) => data.CNY?.last
@@ -1816,12 +1808,21 @@
 								url: 'https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=CNY',
 								parse: (data) => data.CNY
 							},
-							{
-								name: 'Coinbase',
-								url: 'https://api.coinbase.com/v2/exchange-rates?currency=BTC',
-								parse: (data) => parseFloat(data.data?.rates?.CNY)
+						{
+							name: 'Coinbase',
+							url: 'https://api.coinbase.com/v2/exchange-rates?currency=BTC',
+							parse: (data) => parseFloat(data.data?.rates?.CNY)
+						},
+						{
+							// exchangeratesapi.io（EUR基准交叉盘）：1 BTC 兑 CNY = rates.CNY / rates.BTC
+							// 置于最后：免费额度有限，仅在其他源全部不可用时兜底（国内直连可达性较好）
+							name: 'ExchangeRatesAPI',
+							fetch: async (signal) => {
+								const rates = await fetchExchangeRatesApiLatest(signal);
+								return rates.CNY / rates.BTC;
 							}
-						];
+						}
+					];
 
 						for (const source of sources) {
 							let timeoutId;
@@ -1897,14 +1898,6 @@
 								}
 							},
 							{
-								// exchangeratesapi.io（EUR基准交叉盘）：1 BTC 兑 USD = rates.USD / rates.BTC（国内直连可达性较好）
-								name: 'ExchangeRatesAPI',
-								fetch: async (signal) => {
-									const rates = await fetchExchangeRatesApiLatest(signal);
-									return rates.USD / rates.BTC;
-								}
-							},
-							{
 								name: 'Blockchain.info',
 								url: 'https://blockchain.info/ticker',
 								parse: (data) => data.USD?.last
@@ -1918,6 +1911,15 @@
 								name: 'CoinGecko',
 								url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
 								parse: (data) => data.bitcoin?.usd
+							},
+							{
+								// exchangeratesapi.io（EUR基准交叉盘）：1 BTC 兑 USD = rates.USD / rates.BTC
+								// 置于最后：免费额度有限，仅在其他源全部不可用时兜底（国内直连可达性较好）
+								name: 'ExchangeRatesAPI',
+								fetch: async (signal) => {
+									const rates = await fetchExchangeRatesApiLatest(signal);
+									return rates.USD / rates.BTC;
+								}
 							}
 						];
 

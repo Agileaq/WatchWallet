@@ -12,7 +12,7 @@
 // BUILD_HISTORICAL_VERSION：语义版本号，仅用于缓存命名区分（大版本时手动改）。
 // BUILD_HASH：每次 commit 由 post-commit hook 注入，驱动 SW 字节变化。
 const BUILD_HISTORICAL_VERSION = 'V6.0';
-const BUILD_HASH = '95679f6'; // 会被 post-commit hook 自动覆盖
+const BUILD_HASH = 'da71b10'; // 会被 post-commit hook 自动覆盖
 const CACHE_VERSION = `${BUILD_HISTORICAL_VERSION}-${BUILD_HASH}`;
 const CACHE_NAME = `bitwatch-${CACHE_VERSION}`;
 const APP_SHELL = [
