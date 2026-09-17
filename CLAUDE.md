@@ -93,7 +93,7 @@ The application uses Vue 3 Composition API with the following reactive state:
 ### API Rate Limiting
 
 **Critical**: APIs have rate limits. Use delays between requests:
-- 1000ms delay between sequential address refreshes
+- Worker-pool concurrency for bulk address refresh (max 10 simultaneous, 200ms per-worker pacing); address balance fetch timeout 3000ms
 - 5-10s timeouts on fetch requests to avoid hanging
 - Abort controllers to cancel slow requests
 

@@ -1600,7 +1600,7 @@
 								fetch: async () => {
 									const url = `${MEMPOOL_BASE}/address/${address}`;
 									const controller = new AbortController();
-									const timeoutId = setTimeout(() => controller.abort(), 1000);
+									const timeoutId = setTimeout(() => controller.abort(), 3000);
 									try {
 										const res = await fetch(url, { signal: controller.signal });
 										clearTimeout(timeoutId);
@@ -1622,7 +1622,7 @@
 								fetch: async () => {
 									const url = `https://blockstream.info/api/address/${address}`;
 									const controller = new AbortController();
-									const timeoutId = setTimeout(() => controller.abort(), 1000);
+									const timeoutId = setTimeout(() => controller.abort(), 3000);
 									try {
 										const res = await fetch(url, { signal: controller.signal });
 										clearTimeout(timeoutId);
@@ -1644,7 +1644,7 @@
 								fetch: async () => {
 									const url = `https://blockchain.info/balance?active=${address}`;
 									const controller = new AbortController();
-									const timeoutId = setTimeout(() => controller.abort(), 1000);
+									const timeoutId = setTimeout(() => controller.abort(), 3000);
 									try {
 										const res = await fetch(url, { signal: controller.signal });
 										clearTimeout(timeoutId);
@@ -2093,7 +2093,7 @@
 
 						try {
 							// 并发刷新：worker pool，最多同时刷 REFRESH_CONCURRENCY 个地址
-							const REFRESH_CONCURRENCY = 6;
+							const REFRESH_CONCURRENCY = 10;
 							const total = addressList.value.length;
 							let cursor = 0; // 下一个待刷新地址的索引
 							let processedCount = 0;
@@ -2127,7 +2127,7 @@
 									}
 									processedCount++;
 
-									// 每个 worker 间隔 200ms：并发 6 时整体约 6 次/秒，兼顾速度与限流
+									// 每个 worker 间隔 200ms：并发 10 时整体约 10 次/秒，避免触发 mempool.space 429
 									await new Promise(r => setTimeout(r, 200));
 								}
 								cancelled = true;
