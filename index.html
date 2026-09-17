@@ -2093,7 +2093,7 @@
 
 						try {
 							// 并发刷新：worker pool，最多同时刷 REFRESH_CONCURRENCY 个地址
-							const REFRESH_CONCURRENCY = 5;
+							const REFRESH_CONCURRENCY = 6;
 							const total = addressList.value.length;
 							let cursor = 0; // 下一个待刷新地址的索引
 							let processedCount = 0;
