@@ -2127,7 +2127,7 @@
 									}
 									processedCount++;
 
-									// 每个 worker 间隔 200ms：并发 5 时整体约 5 次/秒，兼顾速度与限流
+									// 每个 worker 间隔 200ms：并发 6 时整体约 6 次/秒，兼顾速度与限流
 									await new Promise(r => setTimeout(r, 200));
 								}
 								cancelled = true;
