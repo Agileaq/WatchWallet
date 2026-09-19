@@ -141,6 +141,10 @@
 							<i class="fa-solid" :class="isFeeLoading ? 'fa-stop' : 'fa-rotate'"></i>
 							<span>{{ isFeeLoading ? t('btn_stop_refresh') : t('btn_fees') }}</span>
 						</button>
+						<button v-if="failedRetryList.length > 0 && !isRefreshingAll" @click="retryFailedAddresses" class="bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-2 shadow-sm active:scale-95 select-none cursor-pointer" style="touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-user-select: none;" :title="t('btn_retry_failed', failedRetryList.length)">
+							<i class="fa-solid fa-rotate-left"></i>
+							<span>{{ t('btn_retry_failed', failedRetryList.length) }}</span>
+						</button>
 					</div>
 				</div>
 				<!-- 总资产卡片 -->
@@ -920,6 +924,9 @@
 					msg_addr_refresh_failed: '地址刷新失败：{0}…',
 					msg_check_biometric_failed: '检查生物识别失败',
 					alert_refresh_stopped: '❌ 刷新已停止\n\n已完成 {0}/{1} 个地址的刷新\n成功: {2} | 失败: {3}',
+					btn_retry_failed: '重试失败地址 ({0})',
+					toast_retry_all_success: '✅ {0} 个失败地址已全部重试成功',
+					alert_retry_partial: '⚠️ 重试完成\n\n成功: {0} | 仍失败: {1}\n\n失败地址:\n{2}\n\n可点击"重试失败地址"再次尝试',
 					alert_refresh_error: '❌ 刷新异常\n\n{0}\n\n已完成: {1}, 失败: {2}',
 					confirm_remove_address: '确定移除该地址？',
 					msg_import_failed: '导入失败：{0}',
@@ -1022,6 +1029,9 @@
 					msg_addr_refresh_failed: 'Address refresh failed: {0}…',
 					msg_check_biometric_failed: 'Failed to check biometrics',
 					alert_refresh_stopped: '❌ Refresh stopped\n\nCompleted {0}/{1} addresses\nSuccess: {2} | Failed: {3}',
+					btn_retry_failed: 'Retry failed ({0})',
+					toast_retry_all_success: 'All {0} failed addresses retried successfully',
+					alert_retry_partial: '⚠️ Retry complete\n\nSuccess: {0} | Still failed: {1}\n\nFailed addresses:\n{2}\n\nTap "Retry failed" to try again',
 					alert_refresh_error: '❌ Refresh error\n\n{0}\n\nCompleted: {1}, failed: {2}',
 					confirm_remove_address: 'Remove this address?',
 					msg_import_failed: 'Import failed: {0}',
@@ -1123,6 +1133,9 @@
 					msg_addr_refresh_failed: 'Échec de rafraîchissement : {0}…',
 					msg_check_biometric_failed: 'Échec de vérification de la biométrie',
 					alert_refresh_stopped: '❌ Rafraîchissement arrêté\n\nTerminé {0}/{1} adresses\nRéussis : {2} | Échoués : {3}',
+					btn_retry_failed: 'Réessayer les échecs ({0})',
+					toast_retry_all_success: 'Les {0} adresses en échec ont toutes été réessayées avec succès',
+					alert_retry_partial: '⚠️ Réessai terminé\n\nRéussis : {0} | Toujours en échec : {1}\n\nAdresses échouées :\n{2}\n\nAppuyez sur « Réessayer les échecs » pour réessayer',
 					alert_refresh_error: '❌ Erreur de rafraîchissement\n\n{0}\n\nTerminé : {1}, échoués : {2}',
 					confirm_remove_address: 'Supprimer cette adresse ?',
 					msg_import_failed: 'Échec d\'import : {0}',
@@ -1224,6 +1237,9 @@
 					msg_addr_refresh_failed: 'Error de actualización: {0}…',
 					msg_check_biometric_failed: 'Error al comprobar biometría',
 					alert_refresh_stopped: '❌ Actualización detenida\n\nCompletadas {0}/{1} direcciones\nOK: {2} | Fallidos: {3}',
+					btn_retry_failed: 'Reintentar fallidas ({0})',
+					toast_retry_all_success: 'Las {0} direcciones fallidas se reintentaron con éxito',
+					alert_retry_partial: '⚠️ Reintento completado\n\nOK: {0} | Aún fallidas: {1}\n\nDirecciones fallidas:\n{2}\n\nToca «Reintentar fallidas» para probar de nuevo',
 					alert_refresh_error: '❌ Error de actualización\n\n{0}\n\nCompletadas: {1}, fallidos: {2}',
 					confirm_remove_address: '¿Eliminar esta dirección?',
 					msg_import_failed: 'Importación fallida: {0}',
@@ -1533,6 +1549,8 @@
 					const shouldCancelRefresh = ref(false); // 取消刷新标志
 					const silentCancelRefresh = ref(false); // 静默取消（切后台等场景，不弹alert）
 					const refreshingSet = ref(new Set());
+					const failedRetryList = ref([]); // 全量刷新后失败的地址，供一键重试；空数组时隐藏重试按钮
+					const REFRESH_CONCURRENCY = 10; // 全量刷新/重试共用并发上限（worker pool）
 					const lastRefreshTimestamp = ref(parseInt(localStorage.getItem('lastRefreshTimestamp') || '0')); // 上次刷新的时间戳（持久化）
 					const lastRefreshTime = ref(lastRefreshTimestamp.value ? new Date(lastRefreshTimestamp.value).toLocaleString() : '');
 					const detailAddress = ref(null);
@@ -2090,10 +2108,10 @@
 						let successCount = 0;
 						let failedCount = 0;
 						const failedAddresses = [];
+						const failedAddressesFull = []; // 完整地址，供失败重试
 
 						try {
-							// 并发刷新：worker pool，最多同时刷 REFRESH_CONCURRENCY 个地址
-							const REFRESH_CONCURRENCY = 10;
+							// 并发刷新：worker pool，最多同时刷 REFRESH_CONCURRENCY 个地址（常量定义在 setup 作用域，重试逻辑复用）
 							const total = addressList.value.length;
 							let cursor = 0; // 下一个待刷新地址的索引
 							let processedCount = 0;
@@ -2118,11 +2136,13 @@
 										} else {
 											failedCount++;
 											failedAddresses.push(item.address.slice(0,12));
+											failedAddressesFull.push(item.address);
 											console.warn(`✗ [${i+1}/${total}] ${item.address.slice(0,8)}... 失败`);
 										}
 									} catch (e) {
 										failedCount++;
 										failedAddresses.push(item.address.slice(0,12));
+										failedAddressesFull.push(item.address);
 										console.error(`✗ [${i+1}/${total}] ${item.address.slice(0,8)}... 异常:`, e.message);
 									}
 									processedCount++;
@@ -2142,6 +2162,8 @@
 
 							// 只有完整完成才更新时间戳
 							if (!cancelled) {
+								// 记录失败地址供一键重试；全部成功时为空数组，重试按钮随之隐藏
+								failedRetryList.value = failedAddressesFull;
 								lastRefreshTime.value = new Date().toLocaleString();
 								lastRefreshTimestamp.value = Date.now();
 								localStorage.setItem('lastRefreshTimestamp', String(lastRefreshTimestamp.value));
@@ -2166,6 +2188,64 @@
 						} catch (e) {
 							console.error('全量刷新出错', e);
 							alert(t('alert_refresh_error', e.message, successCount, failedCount));
+						} finally {
+							isRefreshingAll.value = false;
+							shouldCancelRefresh.value = false;
+							silentCancelRefresh.value = false;
+						}
+					}
+
+					async function retryFailedAddresses() {
+						if (isRefreshingAll.value || failedRetryList.value.length === 0) return;
+						isRefreshingAll.value = true;
+						let successCount = 0;
+						try {
+							// 过滤掉已被删除的地址
+							const targets = failedRetryList.value.filter(addr => addressList.value.some(a => a.address === addr));
+							const total = targets.length;
+							if (total === 0) {
+								failedRetryList.value = [];
+								return;
+							}
+							console.log(`开始重试 ${total} 个失败地址（并发上限 ${REFRESH_CONCURRENCY}）...`);
+							let cursor = 0;
+							const stillFailed = [];
+							const worker = async () => {
+								while (!shouldCancelRefresh.value) {
+									const addr = targets[cursor++];
+									if (!addr) return;
+									const item = addressList.value.find(a => a.address === addr);
+									const oldLastChecked = item?.lastChecked || 0;
+									try {
+										await refreshSingleAddress(addr, true);
+										const updated = addressList.value.find(a => a.address === addr);
+										if (updated && updated.lastChecked > oldLastChecked) {
+											successCount++;
+											console.log(`✓ 重试成功 ${addr.slice(0,8)}...`);
+										} else {
+											stillFailed.push(addr);
+											console.warn(`✗ 重试失败 ${addr.slice(0,8)}...`);
+										}
+									} catch (e) {
+										stillFailed.push(addr);
+										console.error(`✗ 重试异常 ${addr.slice(0,8)}...:`, e.message);
+									}
+									await new Promise(r => setTimeout(r, 200));
+								}
+							};
+							await Promise.all(Array.from({ length: Math.min(REFRESH_CONCURRENCY, total) }, () => worker()));
+							if (shouldCancelRefresh.value) {
+								console.log(`重试已取消，已完成 ${successCount + stillFailed.length}/${total} 个地址`);
+							} else {
+								failedRetryList.value = stillFailed;
+								if (stillFailed.length === 0) {
+									showToast(t('toast_retry_all_success', total));
+								} else {
+									alert(t('alert_retry_partial', successCount, stillFailed.length, stillFailed.map(a => a.slice(0, 12)).join('\n')));
+								}
+							}
+						} catch (e) {
+							console.error('重试失败地址出错', e);
 						} finally {
 							isRefreshingAll.value = false;
 							shouldCancelRefresh.value = false;
@@ -2532,6 +2612,8 @@
 						formatFiatValue,
 						isRefreshingAll,
 						refreshingSet,
+						failedRetryList,
+						retryFailedAddresses,
 						lastRefreshTime,
 						totalBalance,
 						detailAddress,
